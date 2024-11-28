@@ -8,9 +8,7 @@ import os
 from urllib.parse import urlencode
 
 
-# CONSTANTS
-## N-Able
-NABLE_KEY = os.getenv("NABLE_KEY") 
+
 
 
 class NAble:
@@ -232,6 +230,18 @@ class NAble:
         devicetype:str,
         describe:bool=False,
         includeDetails:bool=False):
+        """Lists all devices of type 'server/workstation' for a client.
+
+        Args:
+            clientid (int): Client ID
+            devicetype (str): Device type. [server, workstation, mobile_device]
+            includeDetails (bool, optional): Include full device details for all devices. Defaults to False.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+            
+
+        Returns:
+            list: All devices for a client
+        """
     
         response = self._requester(mode='get',endpoint='list_devices_at_client',rawParams=locals().copy())
         if describe != True:
@@ -275,6 +285,15 @@ class NAble:
     def deviceDetails(self,
         deviceid:int,
         describe:bool=False):
+        """Lists all monitoring information for the device (server or workstation)
+
+        Args:
+            deviceid (int): Device ID
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            dict: Full device details
+        """
         
         response = self._requester(mode='get',endpoint='list_device_monitoring_details',rawParams=locals().copy())
         
