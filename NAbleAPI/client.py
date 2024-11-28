@@ -28,8 +28,11 @@ class NAble:
         elif response.status_code != 200: # Some other bad code
             raise Exception(f'Unknown response code {response.status_code}')
         
-        else: # Valid URL 
-            content = xmltodict.parse(response.content)['result'] # Response content
+        else: # Valid URL
+            if endpoint == 'get_site_installation_package' and ('describe' in paramsDict and paramsDict['describe'] != True): # Some items are returned as bytes object
+                return response.content
+            else: 
+                content = xmltodict.parse(response.content)['result'] # Response content
             try: # Check status
                 status = content['@status']
             except KeyError: # Sometimes no status is sent, in which case assume its OK
@@ -40,7 +43,7 @@ class NAble:
                     #TODO maybe this should print out the information insteaed
                     return content['service']
                 elif endpoint == 'list_device_monitoring_details': # Does not have items tag, is instead the devicetype
-                    content 
+                    return content 
                 else:
                     return content['items']
             elif status == 'FAIL':
@@ -301,8 +304,48 @@ class NAble:
     def addSite(self):
         pass
     
-    def siteInstallationPackage(self):
-        pass
+    def siteInstallPackage(self,
+        endcustomerid:int,
+        siteid:int,
+        os:str,
+        type:str,
+        beta:bool=False,
+        mode:str=None,
+        proxyenabled:bool=None,
+        proxyhost:str=None,
+        proxyport:int=None,
+        proxyusername:str=None,
+        proxypassword:str=None,
+        describe:bool=False
+        ):
+        """Creates a Site Installation Package based on the specified installer type. Where successful a package is created and downloaded.
+        
+        
+        Notes:
+            By default this package is based on the latest General Availability Agent unless the beta=true parameter is used. In this case the Site Installation Package contains the current Release Candidate Agent.
+        
+            Support for Mac and Linux Site Installation Packages was introduced in Dashboard v2020.05.21. To maintain previously configured API calls, the Site Installation Package defaults to Windows where an os parameter is not provided.
+
+        Args:
+            endcustomerid (int): Client ID.
+            siteid (int): Site ID.
+            os (str): OS that package should be for [mac,windows,linux]
+            type (str): Type of installer to download [remote_worker,group_policy]. Note: group_policy only works with Windows
+            beta (bool, optional): Download the beta (RC) agent. Defaults to False.
+            mode (str, optional): Mode [authenticate, downloadgp, downloadrwbuild]. Defaults to None.
+            proxyenabled (bool, optional): (DEPRECATED) Use Proxy. Defaults to None.
+            proxyhost (str, optional): (DEPRECATED) Proxy Host. Defaults to None.
+            proxyport (int, optional): (DEPRECATED) Proxy Port. Defaults to None.
+            proxyusername (str, optional): (DEPRECATED) Proxy username. Defaults to None.
+            proxypassword (str, optional): (DEPRECATED)Proxy password. Defaults to None.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            bytes: raw bytes object.
+        """
+        
+        response = self._requester(mode='get',endpoint='get_site_installation_package',rawParams=locals().copy())
+        return response
 
     # Checks and results
     def checks(self):
