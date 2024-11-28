@@ -4,12 +4,6 @@
 # Imports
 import requests
 import xmltodict
-import os
-from urllib.parse import urlencode
-
-
-
-
 
 class NAble:
     def _requester(self,mode,endpoint,rawParams=None):
@@ -414,15 +408,3 @@ class NAble:
 
     def retryPatches(self):
         pass
-
-if __name__ == '__main__':
-    naybl = NAble('uk',NABLE_KEY)
-    
-    clients = naybl.clients()
-    
-    
-    
-    for client in clients:
-        if int(client['device_count']) < 1: # Skip clients with no devices
-            continue
-        devices = naybl.clientDevices(clientid=client['clientid'],devicetype='workstation',includeDetails=True)
