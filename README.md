@@ -97,8 +97,8 @@ I'm doing my best to get them all added!
 
 
 
-### Checks and Results 
-Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/checks_and_results.htm)
+### Clients, SItes, and Devices 
+Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/devices.htm)
 | Service | Status | Function Name | Description |
 | --- | --- | --- | --- |
 | list_clients | Working | clients() | List all clients |
@@ -111,6 +111,52 @@ Official NAble documentation page [here](https://documentation.n-able.com/remote
 | add_client | Planned | addClient | Add a client |
 | add_site | Planned | addSite | Add a site | 
 | get_site_installation_package | Partially Working | siteInstallPackage | Create/Get a site installation package (returns rawbytes right now) |
+
+### Checks and results
+Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/checks_and_results.htm)
+| Service | Status | Function Name | Description |
+| --- | --- | --- | --- |
+| list_failing_checks | Untested | failingChecks() | List all failing checks |
+| list_checks | Untested | checks() |  List all checks for a device |
+| list_check_config | Untested | checkConfig() | Get a single checks configuration |
+
+### Anti-Virus Update Check Information
+Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/api_av_info.htm)
+
+
+### List Backup Check History
+Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/list_backup_history.htmm)
+
+
+### Asset Tracking Information
+Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/asset_tracking_information.htm)
+
+
+### Settings
+Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/settings.htm)
+
+
+### Patch Management
+Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/patch_management.htm)
+
+
+### Managed Anti-Virus
+Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/managed_antivirus2.htm)
+
+
+### Backup & Recovery
+Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/api_mob_over.htm)
+
+
+### Run Task Now
+Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/run_task_now.htm)
+
+
+### List Active Directory Users
+Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/list_active_directory_users.htm)
+
+
+
 
 ### Literally everything else
 Planned!
