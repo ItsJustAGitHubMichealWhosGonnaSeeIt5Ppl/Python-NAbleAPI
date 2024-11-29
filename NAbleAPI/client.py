@@ -84,18 +84,17 @@ class NAble:
     
     def __init__(self,region,key):
         
-        # TODO make regions not case sensitive
         dashboardURLS = {
-            'americas': 'www.am.remote.management', # Untested
-            'asia': 'wwwasia.system-monitor.com', # Untested
-            'australia': 'www.system-monitor.com', # Untested
-            'europe': 'wwweurope1.systemmonitor.eu.com', # Untested
-            ('france','fr'): 'wwwfrance.systemmonitor.eu.com', # Untested
+            ('americas','ams'): 'www.am.remote.management', # Untested
+            ('asia'): 'wwwasia.system-monitor.com', # Untested
+            ('australia','au','aus'): 'www.system-monitor.com', # Untested
+            ('europe','eu','eur'): 'wwweurope1.systemmonitor.eu.com', # Untested
+            ('france','fr',): 'wwwfrance.systemmonitor.eu.com', # Untested
             ('france1','fr1'): 'wwwfrance1.systemmonitor.eu.com', # Untested
-            'germany': 'wwwgermany1.systemmonitor.eu.com', # Untested
-            'ireland': 'wwwireland.systemmonitor.eu.com', # Untested
-            'poland': 'wwwpoland1.systemmonitor.eu.com', # Untested
-            ('united kingdom','uk','gb'): 'www.systemmonitor.co.uk', # Tested
+            ('germany','de','deu'): 'wwwgermany1.systemmonitor.eu.com', # Untested
+            ('ireland','ie','irl'): 'wwwireland.systemmonitor.eu.com', # Untested
+            ('poland','pl','pol'): 'wwwpoland1.systemmonitor.eu.com', # Untested
+            ('united kingdom','uk','gb','gbr'): 'www.systemmonitor.co.uk', # Tested
             ('united states','us','usa'): 'www.systemmonitor.us' # Untested
         }
         regionURL = None
@@ -106,7 +105,7 @@ class NAble:
             else:
                 regionName = [regionName]
             
-            if region in regionName:
+            if region.lower() in regionName: # Check regions. No longer case sensitive
                 regionURL = url
                 break
         if regionURL == None:
@@ -183,7 +182,6 @@ class NAble:
         response = self._requester(mode='get',endpoint='list_sites',rawParams=locals().copy())
         return response['site'] if describe != True else response
 
-    #TODO if only a single device is returned, it will be in DICT format instead of LIST (applies to server and workstation)
     def servers(self,
         siteid:int,
         describe:bool=False):
@@ -199,7 +197,7 @@ class NAble:
         
         response = self._requester(mode='get',endpoint='list_servers',rawParams=locals().copy())
         if describe !=True and isinstance(response['server'],dict): # Make responses consistent
-            response['server'] = [response['server']]
+            response['server'] = [response['server']] # Fixes issue where a site with a single server would return as a dictionary.
         return response['server'] if describe != True else response
 
     def workstations(self,
@@ -217,7 +215,7 @@ class NAble:
 
         response = self._requester(mode='get',endpoint='list_workstations',rawParams=locals().copy())
         if describe !=True and isinstance(response['workstation'],dict): # Make responses consistent
-            response['workstation'] = [response['workstation']]
+            response['workstation'] = [response['workstation']] # Fixes issue where a site with a single workstation would return as a dictionary. #TODO consider moving this into the requester/response parser
         return response['workstation'] if describe != True else response
         
     def agentlessAssets(self,# Unclear what an output from this would look like

@@ -37,16 +37,16 @@ Notes:
 
 | Dashboard URL | Region | Status |
 | --- | --- | --- |
-| www.am.remote.management | americas | Untested |
+| www.am.remote.management | americas, ams | Untested |
 | wwwasia.system-monitor.com | asia | Untested |
-| www.system-monitor.com | australia | Untested |
-| wwweurope1.systemmonitor.eu.com | europe | Untested |
+| www.system-monitor.com | australia, au, aus | Untested |
+| wwweurope1.systemmonitor.eu.com | europe, eu | Untested |
 | wwwfrance.systemmonitor.eu.com | france, fr | Untested |
 | wwwfrance1.systemmonitor.eu.com | france1, fr1 | Untested |
-| wwwgermany1.systemmonitor.eu.com | germany | Untested |
-| wwwireland.systemmonitor.eu.com | ireland | Untested |
-| wwwpoland1.systemmonitor.eu.com | poland | Untested |
-| www.systemmonitor.co.uk | united kingdom, uk, gb | **Verified** |
+| wwwgermany1.systemmonitor.eu.com | germany, de, deu | Untested |
+| wwwireland.systemmonitor.eu.com | ireland, ie, irl | Untested |
+| wwwpoland1.systemmonitor.eu.com | poland, pl,pol | Untested |
+| www.systemmonitor.co.uk | united kingdom, uk, gb, gbr | **Verified** |
 | www.systemmonitor.us | united states, us, usa | Untested |
 
 ### Using the package
