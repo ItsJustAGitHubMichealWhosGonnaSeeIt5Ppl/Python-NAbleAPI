@@ -5,9 +5,34 @@
 import requests
 import xmltodict
 
+# # Known issues
+# mobile devices do not work
+
+
 class NAble:
-    def _requester(self,mode,endpoint,rawParams=None):
+    """NAble Data Extraction API Wrapper
+    Version: 0.0.1
         
+    Official Documentation: https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm
+    
+    Notes:
+        If describe is set to True, the actual response will not be given, just a description of the service.
+
+    Args:
+        region (str): Your dashboard region (not all URLs have been verified)
+        key (str): Your NAble API key
+    """
+    def _requester(self,mode,endpoint,rawParams=None):
+        """Make requests to NAble API
+
+        Args:
+            mode (str): Request mode [get,post,delete]
+            endpoint (str): API endpoint URL
+            rawParams (dict, optional): Parameters, copied from .local()
+
+        Returns:
+            dict: Partially formatted API response
+        """
         
         url = self.queryUrlBase + endpoint # Set URL for requests
         
@@ -58,32 +83,20 @@ class NAble:
 
     
     def __init__(self,region,key):
-        """NAble Data Extraction API Wrapper
         
-        Official Documentation: https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm
-        
-        Notes:
-            If describe is set to True, the actual response will not be given, just a description of the service.
-
-        Args:
-            region (str): Your dashboard region (not all URLs have been verified)
-            key (str): Your NAble API key
-
-        """
-        
-        
+        # TODO make regions not case sensitive
         dashboardURLS = {
-            'americas': 'dashboard.am.remote.management', # Unverified
-            'asia': 'dashboardasia.system-monitor.com', # Unverified
-            'australia': 'www.system-monitor.com', # Unverified
-            'europe': 'dashboardeurope1.systemmonitor.eu.com', # Unverified
-            ('france','fr'): 'www.systemmonitor.eu.com', # Unverified
-            ('france1','fr1'): 'dashboardfrance1.systemmonitor.eu.com', # Unverified
-            'germany': 'dashboardgermany1.systemmonitor.eu.com', # Unverified
-            'ireland': 'www.systemmonitor.eu.com', # Unverified
-            'poland': 'dashboardpoland1.systemmonitor.eu.com', # Unverified
-            ('united kingdom','uk','gb'): 'www.systemmonitor.co.uk', # Verified
-            ('united states','us','usa'): 'www.systemmonitor.us' # Verified
+            'americas': 'www.am.remote.management', # Untested
+            'asia': 'wwwasia.system-monitor.com', # Untested
+            'australia': 'www.system-monitor.com', # Untested
+            'europe': 'wwweurope1.systemmonitor.eu.com', # Untested
+            ('france','fr'): 'wwwfrance.systemmonitor.eu.com', # Untested
+            ('france1','fr1'): 'wwwfrance1.systemmonitor.eu.com', # Untested
+            'germany': 'wwwgermany1.systemmonitor.eu.com', # Untested
+            'ireland': 'wwwireland.systemmonitor.eu.com', # Untested
+            'poland': 'wwwpoland1.systemmonitor.eu.com', # Untested
+            ('united kingdom','uk','gb'): 'www.systemmonitor.co.uk', # Tested
+            ('united states','us','usa'): 'www.systemmonitor.us' # Untested
         }
         regionURL = None
         for regionName, url in dashboardURLS.items(): # Search URLs for matching region
@@ -137,6 +150,7 @@ class NAble:
         
     # Clients, Sites and Devices
     # https://documentation.n-able.com/remote-management/userguide/Content/devices.htm
+    # Add Client, Add Site not yet working
     
     def clients(self,
         devicetype:str=None,
@@ -172,7 +186,7 @@ class NAble:
     #TODO if only a single device is returned, it will be in DICT format instead of LIST (applies to server and workstation)
     def servers(self,
         siteid:int,
-        describe:bool=None):
+        describe:bool=False):
         """Lists all servers for site (including top level asset information if available).
 
         Args:
@@ -183,11 +197,11 @@ class NAble:
             list: List of servers
         """
         
-        
         response = self._requester(mode='get',endpoint='list_servers',rawParams=locals().copy())
+        if describe !=True and isinstance(response['server'],dict): # Make responses consistent
+            response['server'] = [response['server']]
         return response['server'] if describe != True else response
 
-    
     def workstations(self,
         siteid:int,
         describe:bool=None):
@@ -202,9 +216,10 @@ class NAble:
         """
 
         response = self._requester(mode='get',endpoint='list_workstations',rawParams=locals().copy())
+        if describe !=True and isinstance(response['workstation'],dict): # Make responses consistent
+            response['workstation'] = [response['workstation']]
         return response['workstation'] if describe != True else response
         
-
     def agentlessAssets(self,# Unclear what an output from this would look like
         siteid:int,
         describe:bool=False):
@@ -221,7 +236,6 @@ class NAble:
         response = self._requester(mode='get',endpoint='list_agentless_assets',rawParams=locals().copy())
         return response if describe != True else response
     
-
     def clientDevices(self,
         clientid:int,
         devicetype:str,
@@ -293,15 +307,34 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='list_device_monitoring_details',rawParams=locals().copy())
-        
-        devType = list(response.keys())
-        return response[devType[0]] if describe != True else response
+
+        devType = 'workstation' if 'workstation' in response.keys() else 'server' # Allows device object to be returned as a dictionary
+        return response[devType] if describe != True else response
     
     
-    def addClient(self):
+    def addClient(self,
+        name:str,
+        timezone:str=None,
+        licenseconfig:str=None, #XML
+        reportconfig:str=None, #XML
+        officehoursemail:str=None,
+        officehourssms:str=None,
+        outofofficehoursemail:str=None,
+        outofofficehourssms:str=None,
+        describe:bool=False
+        ):
+        #TODO figure out if these are POST or GET requests (this one and sites)
         pass
     
-    def addSite(self):
+    def addSite(self,
+        clientid:int,
+        sitename:str,
+        router1:str=None,
+        router2:str=None,
+        workstationtemplate:str=None,
+        servertemplate:str=None,
+        describe:bool=False # Confirm this actually exists 
+        ):
         pass
     
     def siteInstallPackage(self,
@@ -348,14 +381,61 @@ class NAble:
         return response
 
     # Checks and results
-    def checks(self):
-        pass
+    def checks(self,
+        deviceid:int,
+        describe:bool=False
+        ):
+        """Lists all checks for device
 
-    def failingChecks(self):
-        pass
 
-    def checkConfig(self):
-        pass
+
+        Args:
+            deviceid (int): Device ID
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            list: List of device checks
+        """
+        
+        response = self._requester(mode='get',endpoint='list_checks',rawParams=locals().copy())
+        return response['check'] if describe != True else response
+    
+    def failingChecks(self,
+        clientid:int=None,
+        check_type:str=None,
+        describe:bool=False
+        ):
+        """List all failing checks for all clients
+
+
+        Args:
+            clientid (int, optional): Client ID.
+            check_type (str, optional): Check type [checks,tasks,random]. Random will return all failing checks
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            list: failing checks by client
+        """
+        
+        response = self._requester(mode='get',endpoint='list_failing_checks',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def checkConfig(self,
+        checkid:int,
+        describe:bool=False
+        ):
+        """Lists configuration for the specified check.
+
+        Args:
+            checkid (int): Check ID
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+        
+        Returns:
+            _type_: 
+        """
+        #TODO figure out what output is here
+        response = self._requester(mode='get',endpoint='list_check_config',rawParams=locals().copy())
+        return response if describe != True else response
     
     def formattedCheckOutput(self):
         pass
@@ -450,4 +530,33 @@ class NAble:
         pass
 
     def retryPatches(self):
+        pass
+
+    # Managed Antivirus
+    
+    def mavQuarantine(self):
+        pass
+    
+    def mavQuarantineRelease(self):
+        pass
+
+    def mavQuarantineRemove(self):
+        pass
+    
+    def mavScanStart(self):
+        pass
+    
+    def mavScanPause(self):
+        pass
+    
+    def mavScanCancel(self):
+        pass
+    
+    def mavScans(self):
+        pass
+    
+    def mavScanThreats(self):
+        pass
+    
+    def mavUpdate(self):
         pass
