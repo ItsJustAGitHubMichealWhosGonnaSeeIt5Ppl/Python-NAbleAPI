@@ -8,6 +8,13 @@ import xmltodict
 # # Known issues
 # mobile devices do not work
 
+#TODO Publish to PyPi
+#TODO Add real documentation
+#TODO Create usable scripts/tools
+#TODO Add a changelog https://keepachangelog.com/en/1.0.0/
+
+
+
 
 class NAble:
     """NAble Data Extraction API Wrapper
@@ -72,9 +79,9 @@ class NAble:
                 else:
                     return content['items']
             elif status == 'FAIL':
-                if content['error']['errorcode'] == 3: # Login failed, invalid key
-                    raise ValueError(f'Login failed.  You may be using the wrong regoin, or your API key is invalid')
-                elif content['error']['errorcode'] == 4:
+                if int(content['error']['errorcode']) == 3: # Login failed, invalid key
+                    raise ValueError(f'Login failed. Your region or API key is wrong.')
+                elif int(content['error']['errorcode']) == 4:
                     raise ValueError(f'{content['error']['message']}')
                 else:
                     raise Exception(content['error']['message'])
@@ -83,6 +90,7 @@ class NAble:
 
     
     def __init__(self,region,key):
+        self.version = '0.0.1' # Remember to update the docstring at the top too!
         
         dashboardURLS = {
             ('americas','ams'): 'www.am.remote.management', # Untested
