@@ -54,14 +54,22 @@ Notes:
 Once you've downloaded and extracted the package, you can start using it. (This will be better when it's properly uploaded, sorry)
 
 #### Create a new .py file in the root directory and import the NAble package
-`from NAbleAPI import NAble`
+```
+from NAbleAPI import NAble
+```
 
 #### Authenticate with your API key
-`na = NAble('[YOUR REGION]','[YOUR API KEY]')`
+```
+na = NAble('[YOUR REGION]','[YOUR API KEY]')
+```
 
 Example
 
-`na = NAble('uk','f821213a8d3q43843dj39824')` (Not a real API key, don't try to use it)
+```
+na = NAble('uk','f821213a8d3q43843dj39824')
+```
+
+(Not a real API key, don't try to use it)
 
 
 #### Make your first request
@@ -69,7 +77,9 @@ Gee it sure would be helpful is there was documentation for the available comman
 
 Get all your clients
 
-`myNAbleClients = na.clients()`
+```
+myNAbleClients = na.clients()
+```
 
 
 #### Storing your key
