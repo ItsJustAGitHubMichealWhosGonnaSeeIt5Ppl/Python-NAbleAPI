@@ -426,7 +426,7 @@ class NAble:
         response = self._requester(mode='get',endpoint='list_failing_checks',rawParams=locals().copy())
         return response if describe != True else response
 
-    def checkConfig(self,
+    def checkConfig(self, #TODO test checkConfig
         checkid:int,
         describe:bool=False
         ):
@@ -439,33 +439,189 @@ class NAble:
         Returns:
             _type_: 
         """
-        #TODO figure out what output is here
+        
         response = self._requester(mode='get',endpoint='list_check_config',rawParams=locals().copy())
         return response if describe != True else response
     
-    def formattedCheckOutput(self):
-        pass
-    
-    def outages(self):
-        pass
-    
-    def performanceHistory(self):
-        pass
+    def formattedCheckOutput(self, # TODO test formattedCheckOutput
+        checkid:int,
+        describe:bool=False
+        ):
+        """Returns formatted Dashboard More Information firstline result of check (error or otherwise)
 
-    def driveSpaceHistory(self):
-        pass
-    
-    def exchangeStorageHistory(self):
-        pass
-    
-    def clearCheck(self):
-        pass
-    
-    def addNote(self):
-        pass
+        Args:
+            checkid (int): Check ID
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
 
-    def templates(self):
-        pass
+        Returns:
+            _type_: _description_
+        """
+        
+        response = self._requester(mode='get',endpoint='get_formatted_check_output',rawParams=locals().copy())
+        return response if describe != True else response
+    
+    def outages(self, #TODO test outages
+        deviceid:int,
+        describe:bool=False
+        ):
+        """Returns list of outages which are either still open, or which were closed in last 61 days.
+
+        Args:
+            deviceid (int): Device ID. 
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+        
+        
+        response = self._requester(mode='get',endpoint='list_outages',rawParams=locals().copy())
+        return response if describe != True else response
+    
+    def performanceHistory(self, #TODO test performance history
+        deviceid:int,
+        interval:int=15,
+        since:str=None,
+        describe:bool=False
+        ):
+        """Obtains the data relating to all the Performance and Bandwidth Monitoring Checks running on the specified device.
+
+        Data is available for 24 hours at 15 minute intervals and for 8 days at hourly intervals. If data is needed for longer then it will need to be stored; for efficiency use the since parameter to only obtain new data.
+
+        Note: The Windows Agent supports the Performance Monitoring Check for workstations.
+
+        Args:
+            deviceid (int): Device ID.
+            interval (int, optional): Interval duration (in minutes). Valid options[15, 60]. 15 will get previous 24 hours, 60 will get up to 8 days. Defaults to 15.
+            since (str, optional): Set a start date (ISO-8601). Defaults to None.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+        
+        response = self._requester(mode='get',endpoint='list_performance_history',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def driveSpaceHistory(self, #TODO test drive space history
+        deviceid:int,
+        interval:str,
+        since:str=None,
+        describe:bool=False
+        ):
+        """Returns the daily (interval=DAY), weekly (interval=WEEK) or monthly (interval=MONTH) disk space usage information for a device. Only available for devices which have active FREE_DRIVE_SPACE check(s).
+
+        Args:
+            deviceid (int): Device ID
+            interval (str): Inverval length. [DAY,WEEK,MONTH]
+            since (str, optional): Set a start date (ISO-8601, format depends on interval).
+            - DAY = [year]-[month]-[day]
+            - WEEK = [year]W[week number]
+            - MONTH = [year]-[month]
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+        #TODO add a date standartisation system to replace theirs
+        response = self._requester(mode='get',endpoint='list_drive_space_history',rawParams=locals().copy())
+        return response if describe != True else response
+    
+    def exchangeStorageHistory(self, #TODO Find someone to test Exchange Space history
+        deviceid:int,
+        interval:str,
+        since:str=None,
+        describe:bool=False
+        ):
+        """Returns the daily (interval=DAY), weekly (interval=WEEK) or monthly (interval=MONTH) Exchange Store Size information for a device. Only available for devices where the (Windows server only) Exchange Store Size Check is configured.
+
+        Args:
+            deviceid (int): Device ID
+            interval (str): Inverval length. [DAY,WEEK,MONTH]
+            since (str, optional): Set a start date (ISO-8601, format depends on interval).
+            - DAY = [year]-[month]-[day]
+            - WEEK = [year]W[week number]
+            - MONTH = [year]-[month]
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+        response = self._requester(mode='get',endpoint='list_exchange_storage_history',rawParams=locals().copy())
+        return response if describe != True else response
+    
+    def clearCheck(self, #TODO test clearing check
+        checkid:int,
+        private_note:str=None,
+        public_note:str=None,
+        clear_type:str=None,
+        clear_until:str=None,
+        describe:bool=False
+        ):
+        """Clear a check status. After a check has failed, mark it as 'cleared', thereby acknowledging the cause of the failure.The check will be shown using an amber tick. A note describes the reason for the failure and the action taken by the engineer.
+
+        This API call is only supported where Check Clearing is enabled on the account for this check frequency type, i.e. 24x7 and/or Daily Safety Check.
+        
+        Learn more about enabling check clearing here: https://documentation.n-able.com/remote-management/userguide/Content/configure_check_clearing.htm
+
+        Notes
+
+        Where the option to Prompt for notes when clearing failed checks is enabled in Settings > General Settings> Notes, both the public
+
+        note (customer facing) and the private note (for engineers) must be non-empty.
+
+        Any Check clearing action adds an entry in the User Audit Report.
+
+        Args:
+            checkid (int): Check ID.
+            private_note (str, optional): Private (technical) note. 
+            public_note (str, optional): Public (customer) note. 
+            clear_type (str, optional): Action taken on clearing check untilpasses, untilnextrun, or untildatetime*. 
+            clear_until (str, optional): *If untildatetime is selected as the clear_type then this date/time value is required to determine how long a check will be cleared until (ISO-8601). 
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+        response = self._requester(mode='get',endpoint='clear_check',rawParams=locals().copy())
+        return response if describe != True else response
+    
+    def addNote(self, #TODO test add note
+        checkid:int,
+        private_note:str=None,
+        public_note:str=None,
+        describe:bool=False
+        ):
+        """Add a public/private note to a check based on the provided public_note and/or private_note value.
+
+        Args:
+            checkid (int): Check ID
+            private_note (str, optional): Private (technical) note. 
+            public_note (str, optional): Public (customer) note. 
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+        
+        response = self._requester(mode='get',endpoint='add_check_note',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def templates(self, #TODO test templates
+        devicetype:str=None,
+        describe:bool=False,          
+        ):
+        """List all of the account's server or workstation monitoring templates.
+
+        Args:
+            devicetype (str, optional): Device type [server, workstation].
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+        response = self._requester(mode='get',endpoint='list_templates',rawParams=locals().copy())
+        return response if describe != True else response
 
     # Antivirus Update Check Information
     
@@ -540,13 +696,13 @@ class NAble:
 
     # Managed Antivirus
     
-    def mavQuarantine(self):
+    def deviceMavQuarantine(self):
         pass
     
-    def mavQuarantineRelease(self):
+    def deviceMavQuarantineRelease(self):
         pass
 
-    def mavQuarantineRemove(self):
+    def deviceMavQuarantineRemove(self):
         pass
     
     def mavScanStart(self):
@@ -558,6 +714,9 @@ class NAble:
     def mavScanCancel(self):
         pass
     
+    def mavScanList(self):
+        pass
+    
     def mavScans(self):
         pass
     
@@ -566,3 +725,21 @@ class NAble:
     
     def mavUpdate(self):
         pass
+
+    # Backup & Recovery
+    def backupSelectionSize(self):
+        pass
+    
+    def backupSessions(self):
+        pass
+    
+    # Run task now
+    
+    def runTask(self):
+        pass
+    
+    # List Active Directory Users
+    
+    def activeDirectoryUsers(self):
+        pass
+    

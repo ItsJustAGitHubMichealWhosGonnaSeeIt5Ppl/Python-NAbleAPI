@@ -3,13 +3,12 @@
 from NAbleAPI import NAble
 from time import sleep
 import csv
-from datetime import date,datetime
+from datetime import date
 #TODO add a visual interface or enhanced commandline with curses.
 #TODO add a logger
-#TODO Allow use of existing csv file for check names
 #TODO add option to save settings
 
-toolVer = '0.0.1'
+toolVer = '0.0.2'
 compatibleWith = '0.0.1' # Compatible version of package
 
 def clearConsole(): # Clears the console
@@ -128,7 +127,6 @@ while True:
 clearConsole()
 print('Successfully Connected')
 
-#TODO Fix partial name check
 checkList = [] # Check names to look for
 partialCheckList = [] # Partial check names to look for
 while True: # Configuring
@@ -188,65 +186,61 @@ else:
 checkAll = inputValidation('Would you like to check all clients? [Y/N]: ')
 allClients = NAbleSession.clients() # get all clients
 #TODO Test client selection system via text
+#TODO Test multiple client search
 
 if checkAll == False: # Checking a specific client
-    #TODO allow multiple clients to checked
-    selectedClient = None
+    
+    selectedClients = []
     while True:
-        clientInp = input('Please enter the ID or name of the client you want to check: ') # TODO allow multiple customers to be added here (comma separated)
-        if clientInp.isnumeric(): # Client ID
+        userSearchRaw = input('Please enter the IDs or name of the clients you want to check (comma separated, mix of IDs and names supported): ')
+        userSearchList = userSearchRaw.split(',')
+        for userSearchItem in userSearchRaw:
             validClient = False
-            for client in allClients:
-                if str(clientInp) == str(client['clientid']):
-                    validClient = True
-                    print(f'Client found: {client['name']}')
-                    selectedClient = client
-                    break
-            if validClient == False:
-                clearConsole()
-                print(f'No client with ID {clientInp} found.')
+            if userSearchItem.isnumeric(): # Client ID
+                for client in allClients:
+                    if str(client['clientid']) in str(userSearchItem):
+                        validClient = True
+                        print(f'Client found: {client['name']}')
+                        selectedClients += [client]
+                        break
+                if validClient == False:
+                    clearConsole()
+                    print(f'No client with ID {userSearchItem} found.')
+            else: # Try to find the client
                 
-            
-        else: # Try to find the client
-            
-            #TODO improve search function, name must be near perfect match right now
-            matches = []
-            for client in allClients:
-                if client['name'].lower().startswith(clientInp.lower()):
-                    matches += [client]
-            
-            if len(matches) == 0: # more than 1 name found
-                clearConsole()
-                print(f'No clients found with search {clientInp}. Please try again.')
-            elif len(matches) > 1: # Multiple matches, allow user to pick the right one
-                clearConsole()
-                print(f'Multiple matches for {clientInp} found.')
-                sleep(.4)
-                while True:
-                    count = 1
-                    for match in matches:
-                        print(f'[{count}] {match['name']}')
-                        count +=1
-                    print(f'[{count}] None of the above')
-                    choice = input('Please choose: ')
-                    if (choice.isnumeric() and (int(choice) -2) > len(matches)) or choice.isnumeric == False:
-                        clearConsole()
-                        print('Invlaid selection, please choose from the list below')
-                    elif len(matches) +1 == int(choice): # User does not want any of the available options
-                        clearConsole()
-                        break
-                    else:
-                        selectedClient = matches[choice-1]
-                        break
-        if selectedClient != None: # Client found, move on
-            break
-
-
-print('WARNING this will take a long time if you have alot of devices. Be patient.')
-if checkAll == False:
-    clientsToCheck = [selectedClient]
+                #TODO improve search function, name must be near perfect match right now
+                matches = []
+                for client in allClients:
+                    if client['name'].lower().startswith(userSearchItem.lower()):
+                        matches += [client]
+                
+                if len(matches) == 0: # No names found
+                    clearConsole()
+                    print(f'No clients found with search {userSearchItem}.')
+                elif len(matches) > 1: # Multiple matches, allow user to pick the right one
+                    clearConsole()
+                    print(f'Multiple matches for {userSearchItem} found.')
+                    sleep(.4)
+                    while True:
+                        count = 1
+                        for match in matches:
+                            print(f'[{count}] {match['name']}')
+                            count +=1
+                        print(f'[{count}] None of the above')
+                        choice = input('Please choose: ')
+                        if (choice.isnumeric() and (int(choice) -2) > len(matches)) or choice.isnumeric == False:
+                            clearConsole()
+                            print('Invlaid selection, please choose from the list below')
+                        elif len(matches) +1 == int(choice): # User does not want any of the available options
+                            clearConsole()
+                        else:
+                            selectedClients += [matches[choice-1]]
+        if selectedClients != []:
+            break # TODO maybe allow searching again?
+    clientsToCheck = selectedClients
 else:
     clientsToCheck = allClients  
+print('WARNING this will take a long time if you have alot of devices. Be patient.')
 csvRows = []
 for client in clientsToCheck:
     print(f'Checking {client['name']}')
