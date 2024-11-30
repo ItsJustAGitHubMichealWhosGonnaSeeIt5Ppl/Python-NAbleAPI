@@ -246,7 +246,7 @@ print('WARNING this will take a long time if you have alot of devices. Be patien
 if checkAll == False:
     clientsToCheck = [selectedClient]
 else:
-    clientsToCheck = allClients  
+    clientsToCheck = allClients
 csvRows = []
 for client in clientsToCheck:
     print(f'Checking {client['name']}')
@@ -256,12 +256,12 @@ for client in clientsToCheck:
         print(f'{client['name']} has no devices.')
         continue
     
-    if client['workstation_count'] == 0: # Check for workstations
+    if int(client['workstation_count']) == 0: # Check for workstations
         print(f'{client['name']} has no workstations.')
     else:
         devices += NAbleSession.clientDevices(clientid=client['clientid'],devicetype='workstation',includeDetails=True)['site']
     
-    if client['server_count'] == 0: # Check for workstations
+    if int(client['server_count']) == 0: # Check for workstations
         print(f'{client['name']} has no servers.')
     else:
         devices += NAbleSession.clientDevices(clientid=client['clientid'],devicetype='server',includeDetails=True)['site']
