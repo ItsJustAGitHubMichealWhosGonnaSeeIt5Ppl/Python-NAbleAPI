@@ -4,12 +4,27 @@ from NAbleAPI import NAble
 from time import sleep
 import csv
 from datetime import date
+import logging
+from time import sleep
 #TODO add a visual interface or enhanced commandline with curses.
 #TODO add a logger
 #TODO add option to save settings
 
 toolVer = '0.0.2'
-compatibleWith = '0.0.1' # Compatible version of package
+compatibleWith = '0.0.2' # TODO make this actually do something Compatible version of package
+
+def logfig(): # Configure logger
+    print('Logging level set to normal. To change, type DEBUG, otherwise press enter/return')
+    userInp = input(': ')
+    if userInp.lower().strip() == 'debug':
+        return 'DEBUG'
+    else:
+        return 'WARNING'
+    
+def printList(header,listToPrint):
+    print(header)
+    for item in listToPrint:
+        print(item)
 
 def clearConsole(): # Clears the console
   print('\n' * 100)
@@ -103,7 +118,7 @@ def simpleCSVCreator(filename,fields):
     return filename
     
 print(f'Missing Check Finder Tool\nVersion: {toolVer}\n This tool is used to find missing checks on your devices!')
-
+logging.basicConfig(level=eval(f'logging.{logfig()}'))
 loop = 0
 while True:
     if loop == 10:
@@ -121,6 +136,7 @@ while True:
         break
     except Exception as e:
         clearConsole()
+        logging.info('Login failed', exc_info=1)
         print(f'[ERROR] {e}')
     loop +=1
 
@@ -151,21 +167,19 @@ if checkList == []:
     pass
 else:
     checkList.sort()
-    print('Looking for the following checks')
-    for check in checkList:
-        print(check)
-input('Press any key to continue')
+    printList('Looking for the following checks',checkList)
+    input('Press any key to continue')
+    clearConsole()
 # TODO allow list to be edited here
-clearConsole()
+
 
 if partialCheckList == []: # Skip empty list, not sure this is needed. #TODO is this needed?
     pass
 else:
     partialCheckList.sort() # Sort lists
-    print('Looking for the following partial match checks')
-    for check in partialCheckList:
-        print(check)
-input('Press any key to continue')
+    printList('Looking for the following partial match checks',partialCheckList)
+    input('Press any key to continue')
+
 clearConsole()
 
 
@@ -174,7 +188,7 @@ if saveToCSV:
     csvRowTemplate = []
     for i in range(len(checkList)+len(partialCheckList)): 
         csvRowTemplate += ['Missing'] # Create blank check row
-    
+    #TODO what if user does not choose CSV?
     print('CSV will be created root directory')
     csvName = 'missing_checks'
     csvFields = ['Customer', 'Site', 'Device'] + checkList + partialCheckList
@@ -185,8 +199,6 @@ else:
 
 checkAll = inputValidation('Would you like to check all clients? [Y/N]: ')
 allClients = NAbleSession.clients() # get all clients
-#TODO Test client selection system via text
-#TODO Test multiple client search
 
 if checkAll == False: # Checking a specific client
     
@@ -194,7 +206,9 @@ if checkAll == False: # Checking a specific client
     while True:
         userSearchRaw = input('Please enter the IDs or name of the clients you want to check (comma separated, mix of IDs and names supported): ')
         userSearchList = userSearchRaw.split(',')
-        for userSearchItem in userSearchRaw:
+        
+        for userSearchItem in userSearchList:
+            userSearchItem = userSearchItem.strip() # Remove whitespace
             validClient = False
             if userSearchItem.isnumeric(): # Client ID
                 for client in allClients:
@@ -204,21 +218,21 @@ if checkAll == False: # Checking a specific client
                         selectedClients += [client]
                         break
                 if validClient == False:
-                    clearConsole()
-                    print(f'No client with ID {userSearchItem} found.')
+                    logging.warning(f'No client with ID {userSearchItem} found.')
             else: # Try to find the client
-                
                 #TODO improve search function, name must be near perfect match right now
                 matches = []
+                logging.info(f'Searching for {userSearchItem}')
                 for client in allClients:
+                    logging.debug(f'Checking against {client['name']}')
                     if client['name'].lower().startswith(userSearchItem.lower()):
                         matches += [client]
+                        logging.debug(f'MATCHED {client['name']} with search {userSearchItem}')
                 
                 if len(matches) == 0: # No names found
-                    clearConsole()
-                    print(f'No clients found with search {userSearchItem}.')
+                    logging.warning(f'No clients found with search {userSearchItem}.')
+                    
                 elif len(matches) > 1: # Multiple matches, allow user to pick the right one
-                    clearConsole()
                     print(f'Multiple matches for {userSearchItem} found.')
                     sleep(.4)
                     while True:
@@ -233,10 +247,18 @@ if checkAll == False: # Checking a specific client
                             print('Invlaid selection, please choose from the list below')
                         elif len(matches) +1 == int(choice): # User does not want any of the available options
                             clearConsole()
+                            break
                         else:
-                            selectedClients += [matches[choice-1]]
+                            selectedClients += [matches[int(choice)-1]]
+                            break
+                else:
+                    selectedClients += [matches[0]]
         if selectedClients != []:
-            break # TODO maybe allow searching again?
+            printList('The following clients will be checked',selectedClients)
+            addMore = inputValidation('Would you like to add any additional clients? [Y/N]: ')
+            if addMore == False:
+                break
+            
     clientsToCheck = selectedClients
 else:
     clientsToCheck = allClients  
@@ -250,12 +272,12 @@ for client in clientsToCheck:
         print(f'{client['name']} has no devices.')
         continue
     
-    if client['workstation_count'] == 0: # Check for workstations
+    if int(client['workstation_count']) == 0: # Check for workstations
         print(f'{client['name']} has no workstations.')
     else:
         devices += NAbleSession.clientDevices(clientid=client['clientid'],devicetype='workstation',includeDetails=True)['site']
     
-    if client['server_count'] == 0: # Check for workstations
+    if int(client['server_count']) == 0: # Check for workstations
         print(f'{client['name']} has no servers.')
     else:
         devices += NAbleSession.clientDevices(clientid=client['clientid'],devicetype='server',includeDetails=True)['site']

@@ -3,3 +3,5 @@ NAbleAPI/__pycache__/*
 .env
 test.py
 missing_checks.csv
+python_NAbleAPI.egg-info/**
+missingChecks.conf

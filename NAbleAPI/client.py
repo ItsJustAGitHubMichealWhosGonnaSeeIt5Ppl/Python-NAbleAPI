@@ -4,6 +4,7 @@
 # Imports
 import requests
 import xmltodict
+import logging
 
 # # Known issues
 # mobile devices do not work
@@ -13,14 +14,14 @@ import xmltodict
 #TODO Create usable scripts/tools
 #TODO Add a changelog https://keepachangelog.com/en/1.0.0/
 #TODO add logger
-#TODO add unittest
+#TODO add testing
 
 
 
 
 class NAble:
     """NAble Data Extraction API Wrapper
-    Version: 0.0.1
+    Version: 0.0.2
         
     Official Documentation: https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm
     
@@ -58,15 +59,18 @@ class NAble:
         # Error checking
         if response.status_code == 403: # invalid URL
             raise requests.exceptions.InvalidURL('invalid URL')
-            print('Add an error here, URL is bad')
+        
         elif response.status_code != 200: # Some other bad code
             raise Exception(f'Unknown response code {response.status_code}')
         
         else: # Valid URL
             if endpoint == 'get_site_installation_package' and ('describe' in paramsDict and paramsDict['describe'] != True): # Some items are returned as bytes object
                 return response.content
-            else: 
-                content = xmltodict.parse(response.content)['result'] # Response content
+            else:
+                try:
+                    content = xmltodict.parse(response.content)['result'] # Response content
+                except Exception as e: # BAD BAD BAD but maybe will help me figure out whats gone wrong here
+                    raise e
             try: # Check status
                 status = content['@status']
             except KeyError: # Sometimes no status is sent, in which case assume its OK
@@ -92,7 +96,7 @@ class NAble:
 
     
     def __init__(self,region,key):
-        self.version = '0.0.1' # Remember to update the docstring at the top too!
+        self.version = '0.0.2' # Remember to update the docstring at the top too!
         
         dashboardURLS = {
             ('americas','ams'): 'www.am.remote.management', # Untested
@@ -174,6 +178,7 @@ class NAble:
             list: List of clients
         """
         #TODO add search function here
+        #TODO cache client list
         response = self._requester(mode='get',endpoint='list_clients',rawParams=locals().copy())
         return response['client'] if describe != True else response
 
@@ -313,7 +318,6 @@ class NAble:
         Returns:
             dict: Full device details
         """
-        #FIXME #1 When a device only has a single check, check is returned as a dict, instead of in a list.
         response = self._requester(mode='get',endpoint='list_device_monitoring_details',rawParams=locals().copy())
 
         devType = 'workstation' if 'workstation' in response.keys() else 'server' # Allows device object to be returned as a dictionary
@@ -747,3 +751,6 @@ class NAble:
     def activeDirectoryUsers(self):
         pass
     
+    # Custom
+    def searchClients(self):
+        pass
