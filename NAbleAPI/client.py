@@ -12,6 +12,8 @@ import xmltodict
 #TODO Add real documentation
 #TODO Create usable scripts/tools
 #TODO Add a changelog https://keepachangelog.com/en/1.0.0/
+#TODO add logger
+#TODO add unittest
 
 
 
@@ -171,6 +173,7 @@ class NAble:
         Returns:
             list: List of clients
         """
+        #TODO add search function here
         response = self._requester(mode='get',endpoint='list_clients',rawParams=locals().copy())
         return response['client'] if describe != True else response
 
@@ -281,7 +284,6 @@ class NAble:
                         
                         deviceList = []
                         for device in siteDevices[devicetype]:
-                            
                             #Items which are not returneed in device details, but are in the overview (Why is there a difference?)
                             devStatus = device['status']
                             checkCount = device['checkcount']
@@ -311,10 +313,12 @@ class NAble:
         Returns:
             dict: Full device details
         """
-        
+        #FIXME #1 When a device only has a single check, check is returned as a dict, instead of in a list.
         response = self._requester(mode='get',endpoint='list_device_monitoring_details',rawParams=locals().copy())
 
         devType = 'workstation' if 'workstation' in response.keys() else 'server' # Allows device object to be returned as a dictionary
+        if int(response[devType]['checks']['@count']) > 0 and isinstance(response[devType]['checks']['check'], dict): # Convert single check from dict to list for consistency
+            response[devType]['checks']['check'] = [response[devType]['checks']['check']]
         return response[devType] if describe != True else response
     
     
