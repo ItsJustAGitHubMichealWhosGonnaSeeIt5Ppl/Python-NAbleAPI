@@ -94,7 +94,6 @@ class NAble:
             else:
                 raise Exception(f'Unknown error: {status}')
 
-    
     def __init__(self,region,key):
         self.version = '0.0.2' # Remember to update the docstring at the top too!
         
@@ -324,7 +323,6 @@ class NAble:
         if int(response[devType]['checks']['@count']) > 0 and isinstance(response[devType]['checks']['check'], dict): # Convert single check from dict to list for consistency
             response[devType]['checks']['check'] = [response[devType]['checks']['check']]
         return response[devType] if describe != True else response
-    
     
     def addClient(self,
         name:str,
@@ -685,7 +683,6 @@ class NAble:
         response = self._requester(mode='get',endpoint='get_av_definition_release_date',rawParams=locals().copy())
         return response['definition'] if describe != True else response
     
-
     def AVHistory(self, # TODO maybe allow date filtering here? #TODO why did it return 90?
         deviceid:int, # Claims string in documentation, but all others are int?
         describe:bool=False
@@ -697,7 +694,7 @@ class NAble:
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            List: Previous 60 days AV status/history.  Will show status of "UNKNOWN" if AV is not enabled/running
+            list: Previous 60 days AV status/history.  Will show status of "UNKNOWN" if AV is not enabled/running
         """
 
         
@@ -706,9 +703,23 @@ class NAble:
     
     # Backup Check History
     
-    def backupHistory(self):
-        pass
+    def backupHistory(self, #TODO test backupHistory
+        deviceid:int,
+        describe:bool=False
+        ):
+        """List status of Backup Checks on device for last 60 days.
 
+        Args:
+            deviceid (int): Device ID
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            list: Previous 60 days backup history.  Will show status of "UNKNOWN" if AV is not enabled/running
+        """
+        
+        response = self._requester(mode='get',endpoint='list_backup_history',rawParams=locals().copy())
+        return response['days']['day'] if describe != True else response
+    
     # Asset Tracking Information
     # https://documentation.n-able.com/remote-management/userguide/Content/asset_tracking_information.htm
     
