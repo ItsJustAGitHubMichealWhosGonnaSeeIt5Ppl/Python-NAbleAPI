@@ -6,11 +6,12 @@ import csv
 from datetime import date
 import logging
 from time import sleep
-#TODO add a visual interface or enhanced commandline with curses.
-#TODO add a logger
-#TODO add option to save settings
+import json
 
-toolVer = '0.0.2'
+#TODO add a visual interface or enhanced commandline with curses.
+#TODO add more logs
+
+toolVer = '0.0.3'
 compatibleWith = '0.0.2' # TODO make this actually do something Compatible version of package
 
 def logfig(): # Configure logger
@@ -22,6 +23,8 @@ def logfig(): # Configure logger
         return 'WARNING'
     
 def printList(header,listToPrint):
+    if listToPrint == []: # Return nothing if list is empty
+        return None
     print(header)
     for item in listToPrint:
         print(item)
@@ -29,7 +32,7 @@ def printList(header,listToPrint):
 def clearConsole(): # Clears the console
   print('\n' * 100)
   
-def inputValidation(text,validOptions=['yes','y','no','n'],returnBool=True,timeout=10):
+def inputValidation(text,validOptions=['yes','y','no','n'],returnBool=True,timeout=10): # Input validator
     """Basic input validation
 
     Args:
@@ -56,7 +59,7 @@ def inputValidation(text,validOptions=['yes','y','no','n'],returnBool=True,timeo
     
     raise ValueError('Invalid input, max retries reached') # Raise error if max retries is hit
 
-def simpleCSVCreator(filename,fields):
+def simpleCSVCreator(filename,fields): # Creates CSVs
     if filename.endswith('.csv'):
         rawName = filename.replace('.csv','')
     else:
@@ -116,9 +119,71 @@ def simpleCSVCreator(filename,fields):
 
     print(creationType  + f' CSV file: {filename}')
     return filename
+
+def settingsLoader(): # Loads settings file (if it exists)
+    try:
+        with open('missingChecks.conf','r') as settingsFile:
+            settings = json.loads(settingsFile.readline())
+    except json.decoder.JSONDecodeError:
+        logging.warning('Failed to load settings file: data is invalid (not JSON)')
+        return False, None
+    except FileNotFoundError:
+        logging.info('Failed to load settings file: Does not exist')
+        return False, None
+    except Exception as e:
+        logging.warning('Failed to load settings file: Other error',exc_info=1)
+        return False, None
+    useExisting = inputValidation('Existing settings founds, would you like to use them? [Y/N]: ')
+    if useExisting:
+        print('Loading settings')
+        return True, settings # Use settings
+    else:
+        return False, None # Don't use settings
     
+def settingsCreator(region,key,fullChecks,partialChecks): # Create/save settings
+    template = {'region': None,
+                'key': None,
+                'fullChecks': None,
+                'partialChecks': None
+                }
+    def saveSettings(data):
+        data = json.dumps(data) # Write as json
+        try:
+            with open('missingChecks.conf','w') as settingsFile:
+                settingsFile.write(data)
+        except: # TODO add failures
+            print('Failed to save settings')
+            
+        
+    usrInp = input('Would you like to save these settings for next time?\n[N]o\n[O]nly credentials\n[C]hecks only\n[B]oth credentials and checks\nYour Choice (default = N): ')
+    usrInp = usrInp.lower().strip() # Strip the garbage away
+    clearConsole()
+    if usrInp not in ['n','o','c','b'] or usrInp == 'n':
+        print('Settings will not be saved')
+    else:
+        if usrInp in ['o','b']:
+            template['region'] = region
+            template['key'] = key
+            
+            print('Credentials will be saved')
+        if usrInp in ['c','b']:
+            template['fullChecks'] = fullChecks
+            template['partialChecks'] = partialChecks
+            print('CHECK SAVING CURRENTLY DOES NOT WORK SORRY')
+            #print('Checks will be saved')
+        saveSettings(template)
+   
+     
+# START OF PROGRAM
+
 print(f'Missing Check Finder Tool\nVersion: {toolVer}\n This tool is used to find missing checks on your devices!')
-logging.basicConfig(level=eval(f'logging.{logfig()}'))
+
+logging.basicConfig(level=eval(f'logging.{logfig()}')) # Set logging level
+logging.info('Log level set')
+
+existingSettings = settingsLoader() # Get existing settings (if they exist)
+logging.debug(f'Existing settings returned {existingSettings}')
+
 loop = 0
 while True:
     if loop == 10:
@@ -127,8 +192,12 @@ while True:
         print('I\'m losing hope')
     
     # get key and region
-    userRegion = input('Please enter your region (regions can be found at the package wiki): ')
-    api_key = input('Please enter your API key: ')
+    if loop == 0 and existingSettings[0] and existingSettings[1]['key'] != None: # Use saved settings (only try once)
+        userRegion = existingSettings[1]['region']
+        api_key = existingSettings[1]['key']
+    else:
+        userRegion = input('Please enter your region (regions can be found at the package wiki): ')
+        api_key = input('Please enter your API key: ')
 
     # Set up nable
     try:
@@ -163,36 +232,29 @@ while True: # Configuring
     else:
         clearConsole()
 
-if checkList == []:
-    pass
-else:
-    checkList.sort()
-    printList('Looking for the following checks',checkList)
-    input('Press any key to continue')
-    clearConsole()
 # TODO allow list to be edited here
+# TODO warn if no items have been added to be checked
 
+# Sort lists
+checkList.sort()
+partialCheckList.sort()
 
-if partialCheckList == []: # Skip empty list, not sure this is needed. #TODO is this needed?
-    pass
-else:
-    partialCheckList.sort() # Sort lists
-    printList('Looking for the following partial match checks',partialCheckList)
-    input('Press any key to continue')
+#Print lists (if data is present)
+printList('Looking for the following checks',checkList)
+printList('Looking for the following partial match checks', partialCheckList)
+input('Press any key to continue')
 
 clearConsole()
-
+settingsCreator(userRegion,api_key,checkList,partialCheckList)
 
 saveToCSV = inputValidation('Would you like to save the output of this scan to a CSV? [Y/N]: ')
-if saveToCSV: 
+if saveToCSV:
     csvRowTemplate = []
     for i in range(len(checkList)+len(partialCheckList)): 
         csvRowTemplate += ['Missing'] # Create blank check row
-    #TODO what if user does not choose CSV?
-    print('CSV will be created root directory')
-    csvName = 'missing_checks'
+    print('CSV will be created in root directory')
     csvFields = ['Customer', 'Site', 'Device'] + checkList + partialCheckList
-    csvFilename = simpleCSVCreator(csvName,csvFields) #CSV Filename
+    csvFilename = simpleCSVCreator(filename='missing_checks',fiels=csvFields) # Try to create the CSV
 else:
     clearConsole()
 
@@ -201,7 +263,6 @@ checkAll = inputValidation('Would you like to check all clients? [Y/N]: ')
 allClients = NAbleSession.clients() # get all clients
 
 if checkAll == False: # Checking a specific client
-    
     selectedClients = []
     while True:
         userSearchRaw = input('Please enter the IDs or name of the clients you want to check (comma separated, mix of IDs and names supported): ')
@@ -254,8 +315,10 @@ if checkAll == False: # Checking a specific client
                 else:
                     selectedClients += [matches[0]]
         if selectedClients != []:
-            printList('The following clients will be checked',selectedClients)
+            print('The following clients will be checked')
+            [print (client['name']) for client in selectedClients]# TODO clean this up a bit
             addMore = inputValidation('Would you like to add any additional clients? [Y/N]: ')
+            clearConsole()
             if addMore == False:
                 break
             
@@ -263,17 +326,18 @@ if checkAll == False: # Checking a specific client
 else:
     clientsToCheck = allClients  
 print('WARNING this will take a long time if you have alot of devices. Be patient.')
+
+results = []
 csvRows = []
 for client in clientsToCheck:
-    print(f'Checking {client['name']}')
-    clearConsole()
+    logging.info(f'Checking {client['name']}')
     devices = []
     if int(client['device_count']) == 0: # Skip clients with no devices
-        print(f'{client['name']} has no devices.')
+        logging.info(f'{client['name']} has no devices.')
         continue
     
     if int(client['workstation_count']) == 0: # Check for workstations
-        print(f'{client['name']} has no workstations.')
+        logging.info(f'{client['name']} has no workstations.')
     else:
         devices += NAbleSession.clientDevices(clientid=client['clientid'],devicetype='workstation',includeDetails=True)['site']
     
@@ -282,6 +346,8 @@ for client in clientsToCheck:
     else:
         devices += NAbleSession.clientDevices(clientid=client['clientid'],devicetype='server',includeDetails=True)['site']
     
+    # Storing information
+    client['results'] = []
     #TODO see if mobile devices can be checked
     if len(devices) == 0: # SHouldnt ever be hit, but adding as a safety
         print(f'{client['name']} has no devices.')
@@ -289,28 +355,55 @@ for client in clientsToCheck:
     
     for site in devices:
         for device in site['workstation' if 'workstation' in site.keys() else 'server']:
-            csvDeviceRowBase = [client['name'],site['name'],device['name']] # Create device information for CSV file
-            csvDeviceRowChecks = csvRowTemplate.copy() # Create blank rows to be edited later
+            deviceInfo = {'name':device['name'],
+                          'presentChecks': []}
+            if saveToCSV:
+                csvDeviceRowBase = [client['name'],site['name'],device['name']] # Create device information for CSV file
+                csvDeviceRowChecks = csvRowTemplate.copy() # Create blank rows to be edited later
             if int(device['checks']['@count']) == 0:
                 print(f'{device['name']} has no checks!')
             else:
                 for check in device['checks']['check']: # Check on device
                     if check['description'] in checkList: # Check from list is present on device
-                        listIndex = checkList.index(check['description'])
-                        csvDeviceRowChecks.pop(listIndex)
-                        csvDeviceRowChecks.insert(listIndex,'Present')
+                        deviceInfo['presentChecks'] += [check['description']] # Add check to list
+                        if saveToCSV:
+                            listIndex = checkList.index(check['description'])
+                            csvDeviceRowChecks.pop(listIndex)
+                            csvDeviceRowChecks.insert(listIndex,'Present')
                     else:
                         for partialCheck in partialCheckList: # Look for partial matches
                             if check['description'].lower().startswith(partialCheck.lower()):
-                                listIndex = len(checkList) + partialCheckList.index(partialCheck)
-                                csvDeviceRowChecks.pop(listIndex)
-                                csvDeviceRowChecks.insert(listIndex,'Present')
-            csvRows +=[csvDeviceRowBase + csvDeviceRowChecks] # Add device to CSV file
-with open(csvFilename,'a') as csvF:
-    csvwriter = csv.writer(csvF)
-    csvwriter.writerows(csvRows)
-print('CSV file completed')
-    #TODO add printout here, maybe put a delay on it?
-            
+                                deviceInfo['presentChecks'] += [partialCheck]
+                                if saveToCSV:
+                                    listIndex = len(checkList) + partialCheckList.index(partialCheck)
+                                    csvDeviceRowChecks.pop(listIndex)
+                                    csvDeviceRowChecks.insert(listIndex,'Present')
+            client['results'] += [deviceInfo]
+            if saveToCSV:
+                csvRows +=[csvDeviceRowBase + csvDeviceRowChecks] # Add device to CSV file
+
+
+if saveToCSV:
+    clearConsole()
+    with open(csvFilename,'a') as csvF:
+        csvwriter = csv.writer(csvF)
+        csvwriter.writerows(csvRows)
+
+    print('CSV file saved')
+printResultsMode = inputValidation('Would you like results to pause for each device? (only devices with missing checks will be shown) [Y/N]: ')
+for client in clientsToCheck: # Go through checks
+    if 'results' not in client: # check that key is even present
+        continue
+    
+    for device in client['results']:
+        printQueue = []
+        for check in device['presentChecks']:
+            if check not in partialCheck and check not in checkList:
+                printQueue += [check]
+        if printQueue != []:
+            print(f'{client['name']}: {device['name']} is missing {len(printQueue)} check(s)')
+            [print(f'- {check}') for check in printQueue]
+            if printResultsMode: # Pause if desired
+                input('Press any key to continue')
 
         
