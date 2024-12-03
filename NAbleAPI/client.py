@@ -11,7 +11,6 @@ import logging
 
 #TODO Publish to PyPi
 #TODO Add real documentation
-#TODO Create usable scripts/tools
 #TODO Add a changelog https://keepachangelog.com/en/1.0.0/
 #TODO add logger
 #TODO add testing
@@ -43,6 +42,7 @@ class NAble:
         Returns:
             dict: Partially formatted API response
         """
+        
         
         url = self.queryUrlBase + endpoint # Set URL for requests
         
@@ -77,13 +77,13 @@ class NAble:
                 status = 'OK'
             
             if status == 'OK': # Valid key/request
-                if 'describe' in paramsDict and paramsDict['describe']: # Check what type of response is being returned
-                    #TODO maybe this should print out the information insteaed
-                    return content['service']
-                elif endpoint == 'list_device_monitoring_details': # Does not have items tag, is instead the devicetype
-                    return content 
-                else:
+                if 'items' in content: # Check for 'items' list in content keys.
                     return content['items']
+                elif 'describe' in paramsDict and paramsDict['describe']: 
+                    return content['service']
+                else: # Does not have items tag, so return without
+                    return content 
+                    
             elif status == 'FAIL':
                 if int(content['error']['errorcode']) == 3: # Login failed, invalid key
                     raise ValueError(f'Login failed. Your region or API key is wrong.')
@@ -399,16 +399,14 @@ class NAble:
         deviceid:int,
         describe:bool=False
         ):
-        """Lists all checks for device
-
-
+        """Lists all checks for device.  Gets slightly more infromation than the device details.
 
         Args:
             deviceid (int): Device ID
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            list: List of device checks
+            list: List of checks for device
         """
         
         response = self._requester(mode='get',endpoint='list_checks',rawParams=locals().copy())
@@ -434,7 +432,7 @@ class NAble:
         response = self._requester(mode='get',endpoint='list_failing_checks',rawParams=locals().copy())
         return response if describe != True else response
 
-    def checkConfig(self, #TODO test checkConfig
+    def checkConfig(self,
         checkid:int,
         describe:bool=False
         ):
@@ -445,13 +443,13 @@ class NAble:
             describe (bool, optional): Returns a discription of the service. Defaults to False.
         
         Returns:
-            _type_: 
+            dict: Single check configuration
         """
         
         response = self._requester(mode='get',endpoint='list_check_config',rawParams=locals().copy())
-        return response if describe != True else response
+        return response['check_config'] if describe != True else response
     
-    def formattedCheckOutput(self, # TODO test formattedCheckOutput
+    def formattedCheckOutput(self,
         checkid:int,
         describe:bool=False
         ):
@@ -462,13 +460,13 @@ class NAble:
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            _type_: _description_
+            any: First line of check result (usually a string)
         """
         
         response = self._requester(mode='get',endpoint='get_formatted_check_output',rawParams=locals().copy())
         return response if describe != True else response
     
-    def outages(self, #TODO test outages
+    def outages(self,
         deviceid:int,
         describe:bool=False
         ):
@@ -479,7 +477,7 @@ class NAble:
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            _type_: _description_
+            list: List of outages
         """
         
         
@@ -511,17 +509,17 @@ class NAble:
         response = self._requester(mode='get',endpoint='list_performance_history',rawParams=locals().copy())
         return response if describe != True else response
 
-    def driveSpaceHistory(self, #TODO test drive space history
+    def driveSpaceHistory(self,
         deviceid:int,
-        interval:str,
+        interval:str='DAY',
         since:str=None,
         describe:bool=False
         ):
-        """Returns the daily (interval=DAY), weekly (interval=WEEK) or monthly (interval=MONTH) disk space usage information for a device. Only available for devices which have active FREE_DRIVE_SPACE check(s).
+        """Returns the daily , weekly or monthly disk space usage information for a device. Only available for devices which have active FREE_DRIVE_SPACE check(s).
 
         Args:
             deviceid (int): Device ID
-            interval (str): Inverval length. [DAY,WEEK,MONTH]
+            interval (str): Inverval length. [DAY, WEEK, MONTH]. Defaults to DAY
             since (str, optional): Set a start date (ISO-8601, format depends on interval).
             - DAY = [year]-[month]-[day]
             - WEEK = [year]W[week number]
@@ -529,11 +527,12 @@ class NAble:
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            _type_: _description_
+            dict: Dict with drive letter and check ID, includes LIST (history) with historical information
         """
+        
         #TODO add a date standartisation system to replace theirs
         response = self._requester(mode='get',endpoint='list_drive_space_history',rawParams=locals().copy())
-        return response if describe != True else response
+        return response['drive'] if describe != True else response
     
     def exchangeStorageHistory(self, #TODO Find someone to test Exchange Space history
         deviceid:int,
@@ -633,17 +632,77 @@ class NAble:
 
     # Antivirus Update Check Information
     
-    def supportedAVs(self):
-        pass
+    def supportedAVs(self, # TODO what is the point of this.
+        describe:bool=False
+        ):
+        """Lists display name and identifier for all supported antivirus products.
+        
+        Args:
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
 
-    def AVDefinitions(self):
-        pass
+        Returns:
+            list: List of supported AVs with ID"""
+
+        response = self._requester(mode='get',endpoint='list_supported_av_products',rawParams=locals().copy())
+        return response['products']['product'] if describe != True else response
+
+    def AVDefinitions(self,
+        product:str, #TODO maybe allow search here and use supported AVs endpoint
+        max_results:int=20,
+        describe:bool=False):
+        """Lists the most recent definition versions and date released for a given AV product.
+
+        Args:
+            product (str): AV product ID (can be retrieved with supportedAVs endpoint)
+            max_results (int, optional): Max number of definitions to return. Defaults to 20.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            list: List of AV definitions with version and date released
+        """
+
+        response = self._requester(mode='get',endpoint='list_av_definitions',rawParams=locals().copy())
+        return response['definitions']['definition'] if describe != True else response
     
-    def AVDefinitionsReleaseDate(self):
-        pass
+    def AVDefinitionsReleaseDate(self, # TODO what is the point of this if the date is already provided in the versions endpoint
+            product:str, # TODO allow searching here?
+            version:str, # TODO Allow 'latest' tag to be used instead of a version?
+            describe:bool=False
+        ):
+        """Given an antivirus product ID and a definition version, returns the date and time a definition was released.
 
-    def AVHistory(self):
-        pass
+
+        Args:
+            product (str): AV product ID (can be retrieved with supportedAVs endpoint)
+            version (str): Version (can be retrieved with AVDefinitions endpoint)
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            dict: Product name, version, release date.
+        """
+
+
+        response = self._requester(mode='get',endpoint='get_av_definition_release_date',rawParams=locals().copy())
+        return response['definition'] if describe != True else response
+    
+
+    def AVHistory(self, # TODO maybe allow date filtering here? #TODO why did it return 90?
+        deviceid:int, # Claims string in documentation, but all others are int?
+        describe:bool=False
+        ):
+        """List status of Antivirus Update Checks on device for last 60 days.
+
+        Args:
+            deviceid (int): Device ID
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            List: Previous 60 days AV status/history.  Will show status of "UNKNOWN" if AV is not enabled/running
+        """
+
+        
+        response = self._requester(mode='get',endpoint='list_av_history',rawParams=locals().copy())
+        return response['days']['day'] if describe != True else response
     
     # Backup Check History
     
