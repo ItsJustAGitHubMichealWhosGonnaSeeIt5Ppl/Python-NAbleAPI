@@ -723,54 +723,205 @@ class NAble:
     # Asset Tracking Information
     # https://documentation.n-able.com/remote-management/userguide/Content/asset_tracking_information.htm
     
-    def assetHardware(self):
-        pass
+    def assetHardware(self, #TODO test assetHardware
+        assetid:int,
+        describe:bool=False
+        ):
+        """List all hardware for an asset
 
-    def assetSoftware(self):
-        pass
+        Args:
+            assetid (int): Asset ID (can be gotten from assetDetails using clientid)
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+
+        response = self._requester(mode='get',endpoint='list_all_hardware',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def assetSoftware(self, # TODO test assetSoftware
+        assetid:int,
+        describe:bool=False
+        ):
+        """List all software for an asset
+
+        Args:
+            assetid (int): Asset ID (can be gotten from assetDetails using clientid)
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+
+        response = self._requester(mode='get',endpoint='list_all_software',rawParams=locals().copy())
+        return response if describe != True else response
     
-    def licenseGroups(self):
-        pass
+    def licenseGroups(self, #TODO test licenseGroups
+        describe:bool=False
+        ):
+        """Lists all software license groups for account.
+
+        Args:
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+
+        response = self._requester(mode='get',endpoint='list_license_groups',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def licenseGroupItems(self, # TODO test licenseGroupItems
+        license_group_id:int,
+        describe:bool=False
+        ):
+        """Lists software in a software license group.
+
+        Args:
+            license_group_id (int): License Group ID
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+
+        response = self._requester(mode='get',endpoint='list_license_group_items',rawParams=locals().copy())
+        return response if describe != True else response
     
-    def licenseGroupItems(self):
-        pass
+    def clientLicenseCount(self, # TODO test clientLicenseCount
+        clientid:int,
+        describe:bool=False
+        ):
+        """_summary_
+
+        Args:
+            clientid (int): _description_
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+
+        response = self._requester(mode='get',endpoint='list_client_license_count',rawParams=locals().copy())
+        return response if describe != True else response
     
-    def clientLicenseCount(self):
-        pass
-    
-    def assetLicensedSoftware(self):
-        pass
+    def assetLicensedSoftware(self, # TODO test assetLicensedSoftware
+        assetid:int,
+        describe:bool=False
+        ):
+        """_summary_
+
+        Args:
+            assetid (int): _description_
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+
+        response = self._requester(mode='get',endpoint='list_licensed_software',rawParams=locals().copy())
+        return response if describe != True else response
         
-    def assetDetails(self):
-        pass
+    def assetDetails(self, # TODO assetDetails
+        deviceid:int,
+        describe:bool=False
+        ):
+        """_summary_
+
+        Args:
+            deviceid (int): _description_
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+
+        response = self._requester(mode='get',endpoint='list_device_asset_details',rawParams=locals().copy())
+        return response if describe != True else response
     
     # Settings
     
-    def wallchartSettings(self):
-        pass
+    def wallchartSettings(self, # TODO test wallchartSettings
+        describe:bool=False
+        ):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
     
-    def generalSettings(self):
-        pass
+        response = self._requester(mode='get',endpoint='list_wallchart_settings',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def generalSettings(self, # TODO test generalSettings
+        describe:bool=False
+        ):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
     
+        response = self._requester(mode='get',endpoint='list_general_settings',rawParams=locals().copy())
+        return response if describe != True else response
+
     # Windows Patch Management
     
-    def listPatches(self):
-        pass
+    def listPatches(self, #TODO test listPatches
+        deviceid:int,
+        describe:bool=False
+        ):
 
-    def approvePatches(self):
-        pass
 
-    def doNothingPatches(self):
-        pass
+        response = self._requester(mode='get',endpoint='patch_list_all',rawParams=locals().copy())
+        return response if describe != True else response
 
-    def ignorePatches(self):
-        pass
+    def approvePatches(self, # TODO test approvePatches
+        deviceid:int,
+        patchids:str, # Comma separated
+        describe:bool=False
+        ):
 
-    def reprocessPatches(self):
-        pass
 
-    def retryPatches(self):
-        pass
+        response = self._requester(mode='get',endpoint='patch_approve',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def doNothingPatches(self, # TODO test doNothingPatches
+        deviceid:int,
+        patchids:str, # Comma separated
+        describe:bool=False        
+        ):
+        
+        response = self._requester(mode='get',endpoint='patch_do_nothing',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def ignorePatches(self, # TODO test ignorePatches
+        deviceid:int,
+        patchids:str, # Comma separated
+        describe:bool=False        
+        ):
+        
+        response = self._requester(mode='get',endpoint='patch_ignore',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def reprocessPatches(self, # TODO test reprocessPatches
+        deviceid:int,
+        patchids:str, # Comma separated
+        describe:bool=False        
+        ):
+        
+        response = self._requester(mode='get',endpoint='patch_reprocess',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def retryPatches(self, # TODO test retryPatches
+        deviceid:int,
+        patchids:str, # Comma separated
+        describe:bool=False        
+        ):
+        
+        response = self._requester(mode='get',endpoint='patch_retry',rawParams=locals().copy())
+        return response if describe != True else response
 
     # Managed Antivirus
     
@@ -813,8 +964,13 @@ class NAble:
     
     # Run task now
     
-    def runTask(self):
-        pass
+    def runTask(self,
+        checkid:int,
+        describe:bool=False
+        ):
+
+        response = self._requester(mode='get',endpoint='task_run_now',rawParams=locals().copy())
+        return response if describe != True else response
     
     # List Active Directory Users
     
