@@ -31,7 +31,7 @@ To use the NAble API, you will need to know your region and have an API key.
 To find your region, check [this page](https://documentation.n-able.com/remote-management/userguide/Content/determine_url.htm) or view table below. 
 
 Notes: 
-- Not all regions have been tested, if your region is marked 'untested' on the table below, please let me know whether or not it works.
+- Not all regions have been tested, if your region is marked 'untested' on the table below, please let me know whether it works.
 - If your dashboard URL starts with `www2`, assume it is just `www` for the region.
 - If there is another abbreviation or country code you would like added, let me know!
 
@@ -83,7 +83,7 @@ myNAbleClients = na.clients()
 
 
 #### Storing your key
-Its probably best not to store your API key in your script. Instead, you can create a .env file and use that.
+It's probably best not to store your API key in your script. Instead, you can create a .env file and use that.
 
 1. Create a new file called `.env` in the root directory
 2. Put your API key in it (do not put it in quotes, type exactly as shown below)
@@ -130,12 +130,12 @@ Official NAble documentation page [here](https://documentation.n-able.com/remote
 | list_failing_checks | Working | failingChecks() | List all failing checks |
 | list_check_config | Working | checkConfig() | Get a single checks configuration |
 | get_formatted_check_output | Working | formattedCheckOutput() | Get first line of check result |
-| list_outages | Working | checks() |  List all outages for a device |
+| list_outages | Working | checks() | List all outages for a device |
 | list_performance_history | Untested | performanceHistory() |  Get performance history of a device |
 | list_drive_space_history | Working | driveSpaceHistory() |  Get Device Storage History |
 | list_exchange_storage_history | Untested | exchangeStorageHistory() | Get Exchange Storage History |
 | clear_check | Untested | clearCheck() |  Clear a check |
-| add_check_note | Untested | addNote() |  Add note to a check |
+| add_check_note | Working | addNote() |  Add note to a check |
 | list_templates | Untested | templates() |  List all server/workstation monitoring templates |
 
 ### Anti-Virus Update Check Information
