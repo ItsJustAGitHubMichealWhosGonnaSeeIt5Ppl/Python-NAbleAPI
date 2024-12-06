@@ -15,8 +15,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ItsJustAGitHubMichealWhosGonnaSeeIt5Ppl/{PROJECTURL}"
-Issues = "https://github.com/ItsJustAGitHubMichealWhosGonnaSeeIt5Ppl/{PROJECTURL}/issues"
+Homepage = "https://github.com/ItsJustAGitHubMichealWhosGonnaSeeIt5Ppl/Python-NAbleAPI"
+Issues = "https://github.com/ItsJustAGitHubMichealWhosGonnaSeeIt5Ppl/Python-NAbleAPI/issues"
+Documentation = "https://test.com"
 
 [build-system]
 requires = ["setuptools >= 61.0"]
@@ -24,3 +25,15 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]} # MAKE SURE YOU CREATE THIS FILE
+
+[tool.bumpver]
+current_version = "0.0.2" # VERSION
+version_pattern = "MAJOR.MINOR.PATCH"
+commit_message  = "Bump version {old_version} -> {new_version}"
+commit          = true
+tag             = true
+push            = false
+
+[tool.bumpver.file_patterns]
+"pyproject.toml" = ['current_version = "{version}"', 'version = "{version}"']
+"NAbleAPI/client.py" = ['self.version = "{version}"', 'version = "{version}"'] # MUST MARK ALL FILES WHERE VERSION IS PRESENT
