@@ -18,225 +18,218 @@ import logging
 
 class NAble:
     """NAble Data Extraction API Wrapper
-        
+
+    Version: 0.0.2
+
     Official Documentation: https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm
-    
+
     Notes:
         If describe is set to True, the actual response will not be given, just a description of the service.
 
-    """    
-    def _requester(self,mode,endpoint,rawParams=None):
+    :param region: Your dashboard region (not all URLs have been verified)
+    :type region: str
+    :param key: Your NAble API key
+    :type key: str
+    """
+    def _requester(self, mode, endpoint, rawParams=None):
         """Make requests to NAble API
 
-        :param mode: Request mode [get,post,delete]
+        :param mode: Request mode [get, post, delete]
         :type mode: str
         :param endpoint: API endpoint URL
         :type endpoint: str
-        :param rawParams: Parameters, copied from .local()
+        :param rawParams: Parameters, copied from .local(), optional
         :type rawParams: dict, optional
-        :rtype: dict: Partially formatted response
+
+        :return: Partially formatted API response
+        :rtype: dict
         """
         
-        url = self.queryUrlBase + endpoint # Set URL for requests
+        url = self.queryUrlBase + endpoint  # Set URL for requests
         
-        if rawParams!= None: # Format params
+        if rawParams is not None:  # Format params
             paramsDict = self._formatter(rawParams)
         else:
             paramsDict = {}
         
         try:
-            response  = requests.request(mode, url, params = paramsDict)
+            response = requests.request(mode, url, params=paramsDict)
         except Exception as e:
             raise e
             
         # Error checking
-        if response.status_code == 403: # invalid URL
+        if response.status_code == 403:  # invalid URL
             raise requests.exceptions.InvalidURL('invalid URL')
         
-        elif response.status_code != 200: # Some other bad code
+        elif response.status_code != 200:  # Some other bad code
             raise Exception(f'Unknown response code {response.status_code}')
         
-        else: # Valid URL
-            if endpoint == 'get_site_installation_package' and ('describe' in paramsDict and paramsDict['describe'] != True): # Some items are returned as bytes object
+        else:  # Valid URL
+            if endpoint == 'get_site_installation_package' and ('describe' in paramsDict and paramsDict['describe'] != True):  # Some items are returned as bytes object
                 return response.content
             else:
                 try:
-                    content = xmltodict.parse(response.content)['result'] # Response content
-                except Exception as e: # BAD BAD BAD but maybe will help me figure out whats gone wrong here
+                    content = xmltodict.parse(response.content)['result']  # Response content
+                except Exception as e:  # BAD BAD BAD but maybe will help me figure out whats gone wrong here
                     raise e
-            try: # Check status
+            try:  # Check status
                 status = content['@status']
-            except KeyError: # Sometimes no status is sent, in which case assume its OK
+            except KeyError:  # Sometimes no status is sent, in which case assume its OK
                 status = 'OK'
             
-            if status == 'OK': # Valid key/request
-                if 'items' in content: # Check for 'items' list in content keys.
+            if status == 'OK':  # Valid key/request
+                if 'items' in content:  # Check for 'items' list in content keys.
                     return content['items']
                 elif 'describe' in paramsDict and paramsDict['describe']: 
                     return content['service']
-                else: # Does not have items tag, so return without
+                else:  # Does not have items tag, so return without
                     return content 
                     
             elif status == 'FAIL':
-                if int(content['error']['errorcode']) == 3: # Login failed, invalid key
+                if int(content['error']['errorcode']) == 3:  # Login failed, invalid key
                     raise ValueError(f'Login failed. Your region or API key is wrong.')
                 elif int(content['error']['errorcode']) == 4: 
-                    #Invalid param, EG: bad checkid, bad deviceid.
-                    raise ValueError(f'{content['error']['message']}')
+                    # Invalid param, EG: bad checkid, bad deviceid.
+                    raise ValueError(f'{content["error"]["message"]}')
                 else:
                     raise Exception(content['error']['message'])
             else:
                 raise Exception(f'Unknown error: {status}')
 
-    def __init__(self,region,key,logLevel=None):
-        """NAble API
-
-        :param region: Your dashboard region (not all URLs have been verified)
-        :type region: str
-        :param key: Your N-Able API key
-        :type key: str
-        :param logLevel: Change log level.  Currently does nothing
-        :type logLevel: str, optional
-        :raises ValueError: Invalid Region provided
-        :raises requests.exceptions.ConnectionError: Invalid request URL (problem with the tool, send a bug report)
-        """
-        self.version = '0.0.2' # Remember to update the docstring at the top too!
-        #TODO allow log level to be set
+    def __init__(self, region, key, logLevel=None):
+        self.version = '0.0.2'  # Remember to update the docstring at the top too!
+        # TODO allow log level to be set
         
         dashboardURLS = {
-            ('americas','ams'): 'www.am.remote.management', # Untested
-            ('asia'): 'wwwasia.system-monitor.com', # Untested
-            ('australia','au','aus'): 'www.system-monitor.com', # Untested
-            ('europe','eu','eur'): 'wwweurope1.systemmonitor.eu.com', # Untested
-            ('france','fr',): 'wwwfrance.systemmonitor.eu.com', # Untested
-            ('france1','fr1'): 'wwwfrance1.systemmonitor.eu.com', # Untested
-            ('germany','de','deu'): 'wwwgermany1.systemmonitor.eu.com', # Untested
-            ('ireland','ie','irl'): 'wwwireland.systemmonitor.eu.com', # Untested
-            ('poland','pl','pol'): 'wwwpoland1.systemmonitor.eu.com', # Untested
-            ('united kingdom','uk','gb','gbr'): 'www.systemmonitor.co.uk', # Tested
-            ('united states','us','usa'): 'www.systemmonitor.us' # Untested
+            ('americas', 'ams'): 'www.am.remote.management',  # Untested
+            ('asia'): 'wwwasia.system-monitor.com',  # Untested
+            ('australia', 'au', 'aus'): 'www.system-monitor.com',  # Untested
+            ('europe', 'eu', 'eur'): 'wwweurope1.systemmonitor.eu.com',  # Untested
+            ('france', 'fr',): 'wwwfrance.systemmonitor.eu.com',  # Untested
+            ('france1', 'fr1'): 'wwwfrance1.systemmonitor.eu.com',  # Untested
+            ('germany', 'de', 'deu'): 'wwwgermany1.systemmonitor.eu.com',  # Untested
+            ('ireland', 'ie', 'irl'): 'wwwireland.systemmonitor.eu.com',  # Untested
+            ('poland', 'pl', 'pol'): 'wwwpoland1.systemmonitor.eu.com',  # Untested
+            ('united kingdom', 'uk', 'gb', 'gbr'): 'www.systemmonitor.co.uk',  # Tested
+            ('united states', 'us', 'usa'): 'www.systemmonitor.us'  # Untested
         }
         regionURL = None
-        for regionName, url in dashboardURLS.items(): # Search URLs for matching region
+        for regionName, url in dashboardURLS.items():  # Search URLs for matching region
             
-            if isinstance(regionName,tuple): # Allows tupled items to be properly checked, otherwise us can be seen in australia
-                regionName =list(regionName)
+            if isinstance(regionName, tuple):  # Allows tupled items to be properly checked, otherwise us can be seen in australia
+                regionName = list(regionName)
             else:
                 regionName = [regionName]
             
-            if region.lower() in regionName: # Check regions. No longer case sensitive
+            if region.lower() in regionName:  # Check regions. No longer case sensitive
                 regionURL = url
                 break
-        if regionURL == None:
+        if regionURL is None:
             raise ValueError(f'{region} is not a valid region')
         
-        self.queryUrlBase = f"https://{regionURL}/api/?apikey={key}&service=" # Key and service for use later
+        self.queryUrlBase = f"https://{regionURL}/api/?apikey={key}&service="  # Key and service for use later
         
-        try: # Test URL 
+        try:  # Test URL 
             testRequest = requests.get(self.queryUrlBase + 'list_clients') 
         except requests.exceptions.ConnectionError:
-            raise requests.exceptions.ConnectionError('The request URL is not valid, this is an issue with the module. Pleae report your region and correct API url.')
+            raise requests.exceptions.ConnectionError('The request URL is not valid, this is an issue with the module. Please report your region and correct API url.')
             
-        self._requester(endpoint='list_clients',mode='get')  # Test that key is valid.
+        self._requester(endpoint='list_clients', mode='get')  # Test that key is valid.
         
-    def _formatter(self,params): # TODO reformat docstring
+    def _formatter(self, params):
         """Formats parameters for request
 
-        Args:
-            params (dict): Request parameters
+        :param params: Request parameters
+        :type params: dict
 
-        Returns:
-            dict: URL Encoded request parameters
+        :return: URL Encoded request parameters
+        :rtype: dict
         """
-        paramsToAdd = params # Shouldn't be needed, but had weird issues when it worked directly from the params before.
+        paramsToAdd = params  # Shouldn't be needed, but had weird issues when it worked directly from the params before.
         
-        popList = ['self','endpoint','includeDetails'] # Things that should not be added to params
-        if 'describe' in paramsToAdd and paramsToAdd['describe'] != True: # Remove describe unless its true
+        popList = ['self', 'endpoint', 'includeDetails']  # Things that should not be added to params
+        if 'describe' in paramsToAdd and paramsToAdd['describe'] != True:  # Remove describe unless its true
             popList += ['describe']
             
         for popMe in popList:
-            try: # Skips nonexistent keys
+            try:  # Skips nonexistent keys
                 paramsToAdd.pop(popMe)
             except KeyError:
                 continue
         formattedData = {}
         
-        for item, value in paramsToAdd.items(): # Check params, add anything that isn't blank to the query
-            if value !=None:
-                formattedData.update({item : value})
+        for item, value in paramsToAdd.items():  # Check params, add anything that isn't blank to the query
+            if value is not None:
+                formattedData.update({item: value})
         return formattedData
         
     # Clients, Sites and Devices
     # https://documentation.n-able.com/remote-management/userguide/Content/devices.htm
     # Add Client, Add Site not yet working
     
-    def clients(self,
-        devicetype:str=None,
-        describe:bool=False):
-        """Lists all clients.  If devicetype is given, only clients with active devices matching that type will be returned.
+    def clients(self, devicetype: str = None, describe: bool = False):
+        """Lists all clients. If devicetype is given, only clients with active devices matching that type will be returned.
 
-        :param devicetype: Filter by device type [server, workstation, mobile_device].
+        :param devicetype: Filter by device type [server, workstation, mobile_device], optional
         :type devicetype: str, optional
-        :param describe: Returns a discription of the service, defaults to False
+        :param describe: Returns a description of the service, optional
         :type describe: bool, optional
+
         :return: List of clients
         :rtype: list
         """
-        #TODO add search function here
-        #TODO cache client list
-        response = self._requester(mode='get',endpoint='list_clients',rawParams=locals().copy())
+        # TODO add search function here
+        # TODO cache client list
+        response = self._requester(mode='get', endpoint='list_clients', rawParams=locals().copy())
         return response['client'] if describe != True else response
 
-    def sites(self,
-        clientid:int,
-        describe:bool=False):
+    def sites(self, clientid: int, describe: bool = False):
         """Lists all sites for a client.
 
-        Args:
-            clientid (int): Client ID
-            describe (bool, optional): Returns a discription of the service. Defaults to False.
+        :param clientid: Client ID
+        :type clientid: int
+        :param describe: Returns a description of the service, optional
+        :type describe: bool, optional
 
-        Returns:
-            list: List of client sites
+        :return: List of client sites
+        :rtype: list
         """
         
-        response = self._requester(mode='get',endpoint='list_sites',rawParams=locals().copy())
+        response = self._requester(mode='get', endpoint='list_sites', rawParams=locals().copy())
         return response['site'] if describe != True else response
 
-    def servers(self,
-        siteid:int,
-        describe:bool=False):
+    def servers(self, siteid: int, describe: bool = False):
         """Lists all servers for site (including top level asset information if available).
 
-        Args:
-            siteid (int): Site ID
-            describe (bool, optional): Returns a discription of the service. Defaults to False.
+        :param siteid: Site ID
+        :type siteid: int
+        :param describe: Returns a description of the service, optional
+        :type describe: bool, optional
 
-        Returns:
-            list: List of servers
+        :return: List of servers
+        :rtype: list
         """
         
-        response = self._requester(mode='get',endpoint='list_servers',rawParams=locals().copy())
-        if describe !=True and isinstance(response['server'],dict): # Make responses consistent
-            response['server'] = [response['server']] # Fixes issue where a site with a single server would return as a dictionary.
+        response = self._requester(mode='get', endpoint='list_servers', rawParams=locals().copy())
+        if describe != True and isinstance(response['server'], dict):  # Make responses consistent
+            response['server'] = [response['server']]  # Fixes issue where a site with a single server would return as a dictionary.
         return response['server'] if describe != True else response
 
-    def workstations(self,
-        siteid:int,
-        describe:bool=None):
+    def workstations(self, siteid: int, describe: bool = None):
         """Lists all workstations for site (including top level asset information if available).
 
-        Args:
-            siteid (int): Site ID
-            describe (bool, optional): Returns a discription of the service. Defaults to False.
+        :param siteid: Site ID
+        :type siteid: int
+        :param describe: Returns a description of the service, optional
+        :type describe: bool, optional
 
-        Returns:
-            list: List of workstations
+        :return: List of workstations
+        :rtype: list
         """
 
-        response = self._requester(mode='get',endpoint='list_workstations',rawParams=locals().copy())
-        if describe !=True and isinstance(response['workstation'],dict): # Make responses consistent
-            response['workstation'] = [response['workstation']] # Fixes issue where a site with a single workstation would return as a dictionary. #TODO consider moving this into the requester/response parser
+        response = self._requester(mode='get', endpoint='list_workstations', rawParams=locals().copy())
+        if describe != True and isinstance(response['workstation'], dict):  # Make responses consistent
+            response['workstation'] = [response['workstation']]  # Fixes issue where a site with a single workstation would return as a dictionary. # TODO consider moving this into the requester/response parser
         return response['workstation'] if describe != True else response
         
     def agentlessAssets(self,# Unclear what an output from this would look like
