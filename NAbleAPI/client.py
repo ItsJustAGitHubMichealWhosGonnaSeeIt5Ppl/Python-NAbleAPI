@@ -9,23 +9,27 @@ import logging
 # # Known issues
 # mobile devices do not work
 
-#TODO Publish to PyPi
-#TODO Add real documentation
 #TODO Add a changelog https://keepachangelog.com/en/1.0.0/
 #TODO add logger
 #TODO add testing
-
+#TODO convert all docstrings to sphinx....
 
 
 
 class NAble:
     """NAble Data Extraction API Wrapper
-    Version: 0.0.2
         
     Official Documentation: https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm
     
     Notes:
         If describe is set to True, the actual response will not be given, just a description of the service.
+
+    """    
+    """NAble Data Extraction API Wrapper
+        
+    Official Documentation: https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm
+    
+    
 
     Args:
         region (str): Your dashboard region (not all URLs have been verified)
@@ -169,14 +173,15 @@ class NAble:
     def clients(self,
         devicetype:str=None,
         describe:bool=False):
+        
         """Lists all clients.  If devicetype is given, only clients with active devices matching that type will be returned.
 
         Args:
-            devicetype (str, optional): Filter by device type [server, workstation, mobile_device]. Defaults to None.
-            describe (bool, optional): Returns a discription of the service. Defaults to False.
+            devicetype (:obj:`str`, optional): Filter by device type [server, workstation, mobile_device]. Defaults to None.
+            describe (:obj:`bool`, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            list: List of clients
+            :obj:`list`: List of clients
         """
         #TODO add search function here
         #TODO cache client list
@@ -470,6 +475,7 @@ class NAble:
         deviceid:int,
         describe:bool=False
         ):
+        
         """Returns list of outages which are either still open, or which were closed in last 61 days.
 
         Args:
@@ -1011,6 +1017,7 @@ class NAble:
         describe:bool=False
         ):
 
+
         response = self._requester(mode='get',endpoint='task_run_now',rawParams=locals().copy())
         return response if describe != True else response
     
@@ -1028,5 +1035,6 @@ class NAble:
     def searchClients(self,
         search:str,
         ):
+        
         #TODO return client ID, maybe full client endpoint?
         pass
