@@ -18,6 +18,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
+    'sphinx.ext.napoleon'
 ]
 autodoc_mock_imports = ['xmltodict','requests']
 templates_path = ['_templates']
