@@ -17,21 +17,21 @@ Features
 Installing and updating
 =======================
 
-Install Python-NAbleAPI with (NEED TO ACTUALLY PUBLISH LOL)::
+Install Python-NAbleAPI with::
 
-    pip install python-nableapi
+    pip install NAbleAPI
 
 OR::
 
-    python -m pip install python-nableapi
+    python -m pip install NAbleAPI
 
 Update using::
 
-    pip install python-nableapi --upgrade
+    pip install NAbleAPI --upgrade
 
 OR::
 
-    python -m pip install python-nableapi --upgrade
+    python -m pip install NAbleAPI --upgrade
 
 Getting Started
 ===============

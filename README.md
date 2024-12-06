@@ -14,8 +14,9 @@ NOTE:
 
 ## Installation
 
-Will be published on PyPi, for now just download the whole project
-
+```
+pip install NAbleAPI
+```
 
 ## Getting Started
 
@@ -51,7 +52,6 @@ Notes:
 
 ### Using the package
 
-Once you've downloaded and extracted the package, you can start using it. (This will be better when it's properly uploaded, sorry)
 
 #### Create a new .py file in the root directory and import the NAble package
 ```
