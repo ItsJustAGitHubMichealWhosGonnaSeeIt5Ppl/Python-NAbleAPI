@@ -25,28 +25,17 @@ class NAble:
         If describe is set to True, the actual response will not be given, just a description of the service.
 
     """    
-    """NAble Data Extraction API Wrapper
-        
-    Official Documentation: https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm
-    
-    
-
-    Args:
-        region (str): Your dashboard region (not all URLs have been verified)
-        key (str): Your NAble API key
-    """
     def _requester(self,mode,endpoint,rawParams=None):
         """Make requests to NAble API
 
-        Args:
-            mode (str): Request mode [get,post,delete]
-            endpoint (str): API endpoint URL
-            rawParams (dict, optional): Parameters, copied from .local()
-
-        Returns:
-            dict: Partially formatted API response
+        :param mode: Request mode [get,post,delete]
+        :type mode: str
+        :param endpoint: API endpoint URL
+        :type endpoint: str
+        :param rawParams: Parameters, copied from .local()
+        :type rawParams: dict, optional
+        :rtype: dict: Partially formatted response
         """
-        
         
         url = self.queryUrlBase + endpoint # Set URL for requests
         
@@ -100,6 +89,17 @@ class NAble:
                 raise Exception(f'Unknown error: {status}')
 
     def __init__(self,region,key,logLevel=None):
+        """NAble API
+
+        :param region: Your dashboard region (not all URLs have been verified)
+        :type region: str
+        :param key: Your N-Able API key
+        :type key: str
+        :param logLevel: Change log level.  Currently does nothing
+        :type logLevel: str, optional
+        :raises ValueError: Invalid Region provided
+        :raises requests.exceptions.ConnectionError: Invalid request URL (problem with the tool, send a bug report)
+        """
         self.version = '0.0.2' # Remember to update the docstring at the top too!
         #TODO allow log level to be set
         
@@ -139,7 +139,7 @@ class NAble:
             
         self._requester(endpoint='list_clients',mode='get')  # Test that key is valid.
         
-    def _formatter(self,params):
+    def _formatter(self,params): # TODO reformat docstring
         """Formats parameters for request
 
         Args:
@@ -173,15 +173,14 @@ class NAble:
     def clients(self,
         devicetype:str=None,
         describe:bool=False):
-        
         """Lists all clients.  If devicetype is given, only clients with active devices matching that type will be returned.
 
-        Args:
-            devicetype (:obj:`str`, optional): Filter by device type [server, workstation, mobile_device]. Defaults to None.
-            describe (:obj:`bool`, optional): Returns a discription of the service. Defaults to False.
-
-        Returns:
-            :obj:`list`: List of clients
+        :param devicetype: Filter by device type [server, workstation, mobile_device].
+        :type devicetype: str, optional
+        :param describe: Returns a discription of the service, defaults to False
+        :type describe: bool, optional
+        :return: List of clients
+        :rtype: list
         """
         #TODO add search function here
         #TODO cache client list
