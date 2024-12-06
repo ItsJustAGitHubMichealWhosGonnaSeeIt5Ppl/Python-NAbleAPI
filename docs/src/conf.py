@@ -19,7 +19,7 @@ extensions = [
     'sphinx.ext.autosummary',
     'sphinx.ext.intersphinx',
 ]
-
+autodoc_mock_imports = ['xmltodict','requests']
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 master_doc = 'index'
