@@ -7,7 +7,6 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'Python-NAbleAPI'
-copyright = '2024, Fryan O'
 author = 'Fryan O'
 release = '0.0.2'
 
@@ -19,7 +18,7 @@ extensions = ['sphinx.ext.autodoc']
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-
+master_doc = 'src/index'
 
 
 # -- Options for HTML output -------------------------------------------------
