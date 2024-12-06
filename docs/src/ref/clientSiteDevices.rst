@@ -3,7 +3,7 @@
 .. toctree::
     :maxdepth: 2
     :hidden:
-    :caption: Checks And Results
+    :caption: Clients, Sites, and Devices
 
 Clients and Sites
 ==================

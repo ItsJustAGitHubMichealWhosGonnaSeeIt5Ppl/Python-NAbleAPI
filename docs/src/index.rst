@@ -95,5 +95,5 @@ It's probably best not to store your API key in your script. Instead, you can cr
    :maxdepth: 1
    :caption: Reference
 
-   ref/checksandresults.rst
+   ref/clientSiteDevices.rst
 
