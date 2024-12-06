@@ -9,13 +9,13 @@ import logging
 # # Known issues
 # mobile devices do not work
 
-#TODO Publish to PyPi
-#TODO Add real documentation
+
 #TODO Add a changelog https://keepachangelog.com/en/1.0.0/
 #TODO add logger
 #TODO add testing
-
-
+#TODO Add typeddict or similar to document responses from items https://peps.python.org/pep-0589/
+#TODO add reference ability for things like clientid, etc.
+#TODO add the API url somewhere in the doc string for easier comparison 
 
 
 class NAble:
@@ -172,7 +172,7 @@ class NAble:
         """Lists all clients.  If devicetype is given, only clients with active devices matching that type will be returned.
 
         Args:
-            devicetype (str, optional): Filter by device type [server, workstation, mobile_device]. Defaults to None.
+            devicetype (str, optional): Filter by device type [server, workstation, mobile_device].
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
@@ -189,7 +189,7 @@ class NAble:
         """Lists all sites for a client.
 
         Args:
-            clientid (int): Client ID
+            clientid (int): ClientID.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
@@ -205,11 +205,11 @@ class NAble:
         """Lists all servers for site (including top level asset information if available).
 
         Args:
-            siteid (int): Site ID
+            siteid (:obj:`int`): Site ID.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            list: List of servers
+            list: List of servers.
         """
         
         response = self._requester(mode='get',endpoint='list_servers',rawParams=locals().copy())
@@ -223,11 +223,11 @@ class NAble:
         """Lists all workstations for site (including top level asset information if available).
 
         Args:
-            siteid (int): Site ID
+            ssiteid (:obj:`int`): Site ID.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            list: List of workstations
+            list: List of workstations.
         """
 
         response = self._requester(mode='get',endpoint='list_workstations',rawParams=locals().copy())
@@ -241,11 +241,11 @@ class NAble:
         """Lists all agentless and mini-agent asset devices for site (including top level asset information)
 
         Args:
-            siteid (int): Site ID
+            siteid (:obj:`int`): Site ID.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            list: List of agentless devices
+            list: List of agentless devices.
         """
         
         response = self._requester(mode='get',endpoint='list_agentless_assets',rawParams=locals().copy())
@@ -259,14 +259,14 @@ class NAble:
         """Lists all devices of type 'server/workstation' for a client.
 
         Args:
-            clientid (int): Client ID
-            devicetype (str): Device type. [server, workstation, mobile_device]
+            clientid (:obj:`int`): Client ID.
+            devicetype (str): Device type. [server, workstation, mobile_device].
             includeDetails (bool, optional): Include full device details for all devices. Defaults to False.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
             
 
         Returns:
-            list: All devices for a client
+            list: All devices for a client.
         """
     
         response = self._requester(mode='get',endpoint='list_devices_at_client',rawParams=locals().copy())
@@ -313,7 +313,7 @@ class NAble:
         """Lists all monitoring information for the device (server or workstation)
 
         Args:
-            deviceid (int): Device ID
+            deviceid (:obj:`int`): Device ID.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:

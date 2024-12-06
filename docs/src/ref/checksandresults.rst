@@ -5,20 +5,56 @@
     :hidden:
     :caption: Checks And Results
 
-Checks and Results
+Clients and Sites
 ==================
+These functions allow you to interact with your clients and sites.
 
 Official documentation (needs link)
 
-Clients
+List Clients
 -------
-
-.. autosummary::
-    :nosignatures:
-
-    NAble.clients
 
 .. automethod:: NAble.clients
 
-Sites
+Add Client
+----------
+NOT YET IMPLEMENTED
+
+.. automethod:: NAble.addClient
+
+
+List Sites
 -----
+
+.. automethod:: NAble.sites
+
+Add Site
+----------
+NOT YET IMPLEMENTED
+
+.. automethod:: NAble.addSite
+
+Devices
+=======
+These functions allow you to interact with your devices
+
+List Servers
+-------
+
+.. automethod:: NAble.servers
+
+List Workstations
+------------
+
+.. automethod:: NAble.workstations
+
+Get Client Devices
+--------------
+
+.. automethod:: NAble.clientDevices
+
+Device Details
+--------------
+
+.. automethod:: NAble.deviceDetails
+
