@@ -14,8 +14,6 @@ release = '0.0.2'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-# Imports
-from NAbleAPI import NAble
 
 extensions = ['sphinx.ext.autodoc']
 
