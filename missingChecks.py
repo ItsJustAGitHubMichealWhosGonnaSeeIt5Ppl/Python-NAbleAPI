@@ -324,10 +324,14 @@ if checkAll == False: # Checking a specific client
             
     clientsToCheck = selectedClients
 else:
+<<<<<<< HEAD
     clientsToCheck = allClients  
 print('WARNING this will take a long time if you have alot of devices. Be patient.')
 
 results = []
+=======
+    clientsToCheck = allClients
+>>>>>>> main
 csvRows = []
 for client in clientsToCheck:
     logging.info(f'Checking {client['name']}')
@@ -337,7 +341,11 @@ for client in clientsToCheck:
         continue
     
     if int(client['workstation_count']) == 0: # Check for workstations
+<<<<<<< HEAD
         logging.info(f'{client['name']} has no workstations.')
+=======
+        print(f'{client['name']} has no workstations.')
+>>>>>>> main
     else:
         devices += NAbleSession.clientDevices(clientid=client['clientid'],devicetype='workstation',includeDetails=True)['site']
     
