@@ -17,7 +17,7 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/ItsJustAGitHubMichealWhosGonnaSeeIt5Ppl/Python-NAbleAPI"
 Issues = "https://github.com/ItsJustAGitHubMichealWhosGonnaSeeIt5Ppl/Python-NAbleAPI/issues"
-Documentation = "https://test.com"
+Documentation = "https://python-nableapi.readthedocs.io/"
 
 [build-system]
 requires = ["setuptools >= 61.0"]
