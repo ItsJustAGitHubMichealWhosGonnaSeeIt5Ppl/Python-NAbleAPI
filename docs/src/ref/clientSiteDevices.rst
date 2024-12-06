@@ -17,6 +17,7 @@ List Clients
 .. automethod:: NAble.clients
 
 Example Client Item::
+
      {'name': 'A Name', # Client Name
      'clientid': '12345', # Client ID
      'view_dashboard': '0', # Whether client can view dashboard?
@@ -29,7 +30,6 @@ Example Client Item::
      'mobile_device_count': '0', # mobile devices count
      'device_count': '1' # Total devices
      }
-
 
 Add Client
 ----------
