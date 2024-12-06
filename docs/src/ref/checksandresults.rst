@@ -10,13 +10,19 @@ Checks and Results
 
 Official documentation (needs link)
 
-Clients
--------
-
 .. autosummary::
     :nosignatures:
 
     NAble.clients
+    NAble.sites
+    NAble.servers
+    NAble.workstations
+    NAble.agentlessDevices
+
+Clients
+-------
+
+
 
 .. automethod:: NAble.clients
 
