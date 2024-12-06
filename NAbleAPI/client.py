@@ -87,15 +87,17 @@ class NAble:
             elif status == 'FAIL':
                 if int(content['error']['errorcode']) == 3: # Login failed, invalid key
                     raise ValueError(f'Login failed. Your region or API key is wrong.')
-                elif int(content['error']['errorcode']) == 4:
+                elif int(content['error']['errorcode']) == 4: 
+                    #Invalid param, EG: bad checkid, bad deviceid.
                     raise ValueError(f'{content['error']['message']}')
                 else:
                     raise Exception(content['error']['message'])
             else:
                 raise Exception(f'Unknown error: {status}')
 
-    def __init__(self,region,key):
+    def __init__(self,region,key,logLevel=None):
         self.version = '0.0.2' # Remember to update the docstring at the top too!
+        #TODO allow log level to be set
         
         dashboardURLS = {
             ('americas','ams'): 'www.am.remote.management', # Untested
@@ -591,13 +593,13 @@ class NAble:
         response = self._requester(mode='get',endpoint='clear_check',rawParams=locals().copy())
         return response if describe != True else response
     
-    def addNote(self, #TODO test add note
+    def addNote(self,
         checkid:int,
         private_note:str=None,
         public_note:str=None,
         describe:bool=False
         ):
-        """Add a public/private note to a check based on the provided public_note and/or private_note value.
+        """Add a public/private note to a check.  Check will be added by the admin account/account API key was retrieved from.
 
         Args:
             checkid (int): Check ID
@@ -606,9 +608,9 @@ class NAble:
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            _type_: _description_
+            dict: Confirmation of note being added
         """
-        
+        # TODO possibly make this return True/False depending on whether note is added or not
         response = self._requester(mode='get',endpoint='add_check_note',rawParams=locals().copy())
         return response if describe != True else response
 
@@ -956,11 +958,51 @@ class NAble:
         pass
 
     # Backup & Recovery
-    def backupSelectionSize(self):
-        pass
+    def backupSelectionSize(self, #TODO test backup selection size
+        cliendid:int,
+        siteid:int,
+        deviceid:int,
+        year:int,
+        month:int,
+        describe:bool=False
+        ):
+        """Returns the Backup & Recovery - previously known as Managed Online Backup - (MOB) selection size for the specified device for the entered month and year combination. Please be aware that the backup values stated in this API call are in Bytes.
+
+        Args:
+            cliendid (int): Client ID.
+            siteid (int): Site ID.
+            deviceid (int): Device ID.
+            year (int): Year.
+            month (int): Month (00-12).
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+
+        response = self._requester(mode='get',endpoint='mob/mob_list_selection_size',rawParams=locals().copy())
+        return response if describe != True else response
     
-    def backupSessions(self):
-        pass
+    def backupSessions(self, #TODO test backupSessions
+        deviceid:int,
+        describe:bool=False
+        ):
+        """ists all Backup & Recovery - previously known as Managed Online Backup - (MOB) sessions for a device.
+
+        Note: Backups are recorded in batches after the whole batch finishes; once recorded the information about all backup sessions is available for the lifespan of the device, whilst Backup & Recovery remains enabled.
+
+        Please be aware that the backup values stated in this API call are in Bytes. 
+
+        Args:
+            deviceid (int): Device ID.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+
+        response = self._requester(mode='get',endpoint='list_mob_sessions',rawParams=locals().copy())
+        return response if describe != True else response
     
     # Run task now
     
@@ -974,9 +1016,17 @@ class NAble:
     
     # List Active Directory Users
     
-    def activeDirectoryUsers(self):
-        pass
+    def activeDirectoryUsers(self, #TODO Find someone to test activeDicectoryUsers.
+        siteid:int,
+        describe:bool=False
+        ):
+
+        response = self._requester(mode='get',endpoint='task_run_now',rawParams=locals().copy())
+        return response if describe != True else response
     
     # Custom
-    def searchClients(self):
+    def searchClients(self,
+        search:str,
+        ):
+        #TODO return client ID, maybe full client endpoint?
         pass
