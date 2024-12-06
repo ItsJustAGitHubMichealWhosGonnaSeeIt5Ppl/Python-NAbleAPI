@@ -9,9 +9,8 @@
 name: Publish to PyPi
 
 on:
-  push:
-    branches:
-      - master
+  release:
+    types: [created]
 
 jobs:
   build:
