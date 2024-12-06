@@ -4,21 +4,23 @@
 # Imports
 import requests
 import xmltodict
+import logging
 
 # # Known issues
 # mobile devices do not work
 
 #TODO Publish to PyPi
 #TODO Add real documentation
-#TODO Create usable scripts/tools
 #TODO Add a changelog https://keepachangelog.com/en/1.0.0/
+#TODO add logger
+#TODO add testing
 
 
 
 
 class NAble:
     """NAble Data Extraction API Wrapper
-    Version: 0.0.1
+    Version: 0.0.2
         
     Official Documentation: https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm
     
@@ -41,6 +43,7 @@ class NAble:
             dict: Partially formatted API response
         """
         
+        
         url = self.queryUrlBase + endpoint # Set URL for requests
         
         if rawParams!= None: # Format params
@@ -56,41 +59,45 @@ class NAble:
         # Error checking
         if response.status_code == 403: # invalid URL
             raise requests.exceptions.InvalidURL('invalid URL')
-            print('Add an error here, URL is bad')
+        
         elif response.status_code != 200: # Some other bad code
             raise Exception(f'Unknown response code {response.status_code}')
         
         else: # Valid URL
             if endpoint == 'get_site_installation_package' and ('describe' in paramsDict and paramsDict['describe'] != True): # Some items are returned as bytes object
                 return response.content
-            else: 
-                content = xmltodict.parse(response.content)['result'] # Response content
+            else:
+                try:
+                    content = xmltodict.parse(response.content)['result'] # Response content
+                except Exception as e: # BAD BAD BAD but maybe will help me figure out whats gone wrong here
+                    raise e
             try: # Check status
                 status = content['@status']
             except KeyError: # Sometimes no status is sent, in which case assume its OK
                 status = 'OK'
             
             if status == 'OK': # Valid key/request
-                if 'describe' in paramsDict and paramsDict['describe']: # Check what type of response is being returned
-                    #TODO maybe this should print out the information insteaed
-                    return content['service']
-                elif endpoint == 'list_device_monitoring_details': # Does not have items tag, is instead the devicetype
-                    return content 
-                else:
+                if 'items' in content: # Check for 'items' list in content keys.
                     return content['items']
+                elif 'describe' in paramsDict and paramsDict['describe']: 
+                    return content['service']
+                else: # Does not have items tag, so return without
+                    return content 
+                    
             elif status == 'FAIL':
                 if int(content['error']['errorcode']) == 3: # Login failed, invalid key
                     raise ValueError(f'Login failed. Your region or API key is wrong.')
-                elif int(content['error']['errorcode']) == 4:
+                elif int(content['error']['errorcode']) == 4: 
+                    #Invalid param, EG: bad checkid, bad deviceid.
                     raise ValueError(f'{content['error']['message']}')
                 else:
                     raise Exception(content['error']['message'])
             else:
                 raise Exception(f'Unknown error: {status}')
 
-    
-    def __init__(self,region,key):
-        self.version = '0.0.1' # Remember to update the docstring at the top too!
+    def __init__(self,region,key,logLevel=None):
+        self.version = '0.0.2' # Remember to update the docstring at the top too!
+        #TODO allow log level to be set
         
         dashboardURLS = {
             ('americas','ams'): 'www.am.remote.management', # Untested
@@ -171,6 +178,8 @@ class NAble:
         Returns:
             list: List of clients
         """
+        #TODO add search function here
+        #TODO cache client list
         response = self._requester(mode='get',endpoint='list_clients',rawParams=locals().copy())
         return response['client'] if describe != True else response
 
@@ -281,7 +290,6 @@ class NAble:
                         
                         deviceList = []
                         for device in siteDevices[devicetype]:
-                            
                             #Items which are not returneed in device details, but are in the overview (Why is there a difference?)
                             devStatus = device['status']
                             checkCount = device['checkcount']
@@ -311,12 +319,12 @@ class NAble:
         Returns:
             dict: Full device details
         """
-        
         response = self._requester(mode='get',endpoint='list_device_monitoring_details',rawParams=locals().copy())
 
         devType = 'workstation' if 'workstation' in response.keys() else 'server' # Allows device object to be returned as a dictionary
+        if int(response[devType]['checks']['@count']) > 0 and isinstance(response[devType]['checks']['check'], dict): # Convert single check from dict to list for consistency
+            response[devType]['checks']['check'] = [response[devType]['checks']['check']]
         return response[devType] if describe != True else response
-    
     
     def addClient(self,
         name:str,
@@ -391,16 +399,14 @@ class NAble:
         deviceid:int,
         describe:bool=False
         ):
-        """Lists all checks for device
-
-
+        """Lists all checks for device.  Gets slightly more infromation than the device details.
 
         Args:
             deviceid (int): Device ID
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            list: List of device checks
+            list: List of checks for device
         """
         
         response = self._requester(mode='get',endpoint='list_checks',rawParams=locals().copy())
@@ -437,116 +443,497 @@ class NAble:
             describe (bool, optional): Returns a discription of the service. Defaults to False.
         
         Returns:
-            _type_: 
+            dict: Single check configuration
         """
-        #TODO figure out what output is here
+        
         response = self._requester(mode='get',endpoint='list_check_config',rawParams=locals().copy())
+        return response['check_config'] if describe != True else response
+    
+    def formattedCheckOutput(self,
+        checkid:int,
+        describe:bool=False
+        ):
+        """Returns formatted Dashboard More Information firstline result of check (error or otherwise)
+
+        Args:
+            checkid (int): Check ID
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            any: First line of check result (usually a string)
+        """
+        
+        response = self._requester(mode='get',endpoint='get_formatted_check_output',rawParams=locals().copy())
         return response if describe != True else response
     
-    def formattedCheckOutput(self):
-        pass
-    
-    def outages(self):
-        pass
-    
-    def performanceHistory(self):
-        pass
+    def outages(self,
+        deviceid:int,
+        describe:bool=False
+        ):
+        """Returns list of outages which are either still open, or which were closed in last 61 days.
 
-    def driveSpaceHistory(self):
-        pass
-    
-    def exchangeStorageHistory(self):
-        pass
-    
-    def clearCheck(self):
-        pass
-    
-    def addNote(self):
-        pass
+        Args:
+            deviceid (int): Device ID. 
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
 
-    def templates(self):
-        pass
+        Returns:
+            list: List of outages
+        """
+        
+        
+        response = self._requester(mode='get',endpoint='list_outages',rawParams=locals().copy())
+        return response if describe != True else response
+    
+    def performanceHistory(self, #TODO test performance history
+        deviceid:int,
+        interval:int=15,
+        since:str=None,
+        describe:bool=False
+        ):
+        """Obtains the data relating to all the Performance and Bandwidth Monitoring Checks running on the specified device.
+
+        Data is available for 24 hours at 15 minute intervals and for 8 days at hourly intervals. If data is needed for longer then it will need to be stored; for efficiency use the since parameter to only obtain new data.
+
+        Note: The Windows Agent supports the Performance Monitoring Check for workstations.
+
+        Args:
+            deviceid (int): Device ID.
+            interval (int, optional): Interval duration (in minutes). Valid options[15, 60]. 15 will get previous 24 hours, 60 will get up to 8 days. Defaults to 15.
+            since (str, optional): Set a start date (ISO-8601). Defaults to None.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+        
+        response = self._requester(mode='get',endpoint='list_performance_history',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def driveSpaceHistory(self,
+        deviceid:int,
+        interval:str='DAY',
+        since:str=None,
+        describe:bool=False
+        ):
+        """Returns the daily , weekly or monthly disk space usage information for a device. Only available for devices which have active FREE_DRIVE_SPACE check(s).
+
+        Args:
+            deviceid (int): Device ID
+            interval (str): Inverval length. [DAY, WEEK, MONTH]. Defaults to DAY
+            since (str, optional): Set a start date (ISO-8601, format depends on interval).
+            - DAY = [year]-[month]-[day]
+            - WEEK = [year]W[week number]
+            - MONTH = [year]-[month]
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            dict: Dict with drive letter and check ID, includes LIST (history) with historical information
+        """
+        
+        #TODO add a date standartisation system to replace theirs
+        response = self._requester(mode='get',endpoint='list_drive_space_history',rawParams=locals().copy())
+        return response['drive'] if describe != True else response
+    
+    def exchangeStorageHistory(self, #TODO Find someone to test Exchange Space history
+        deviceid:int,
+        interval:str,
+        since:str=None,
+        describe:bool=False
+        ):
+        """Returns the daily (interval=DAY), weekly (interval=WEEK) or monthly (interval=MONTH) Exchange Store Size information for a device. Only available for devices where the (Windows server only) Exchange Store Size Check is configured.
+
+        Args:
+            deviceid (int): Device ID
+            interval (str): Inverval length. [DAY,WEEK,MONTH]
+            since (str, optional): Set a start date (ISO-8601, format depends on interval).
+            - DAY = [year]-[month]-[day]
+            - WEEK = [year]W[week number]
+            - MONTH = [year]-[month]
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+        response = self._requester(mode='get',endpoint='list_exchange_storage_history',rawParams=locals().copy())
+        return response if describe != True else response
+    
+    def clearCheck(self, #TODO test clearing check
+        checkid:int,
+        private_note:str=None,
+        public_note:str=None,
+        clear_type:str=None,
+        clear_until:str=None,
+        describe:bool=False
+        ):
+        """Clear a check status. After a check has failed, mark it as 'cleared', thereby acknowledging the cause of the failure.The check will be shown using an amber tick. A note describes the reason for the failure and the action taken by the engineer.
+
+        This API call is only supported where Check Clearing is enabled on the account for this check frequency type, i.e. 24x7 and/or Daily Safety Check.
+        
+        Learn more about enabling check clearing here: https://documentation.n-able.com/remote-management/userguide/Content/configure_check_clearing.htm
+
+        Notes
+
+        Where the option to Prompt for notes when clearing failed checks is enabled in Settings > General Settings> Notes, both the public
+
+        note (customer facing) and the private note (for engineers) must be non-empty.
+
+        Any Check clearing action adds an entry in the User Audit Report.
+
+        Args:
+            checkid (int): Check ID.
+            private_note (str, optional): Private (technical) note. 
+            public_note (str, optional): Public (customer) note. 
+            clear_type (str, optional): Action taken on clearing check untilpasses, untilnextrun, or untildatetime*. 
+            clear_until (str, optional): *If untildatetime is selected as the clear_type then this date/time value is required to determine how long a check will be cleared until (ISO-8601). 
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+        response = self._requester(mode='get',endpoint='clear_check',rawParams=locals().copy())
+        return response if describe != True else response
+    
+    def addNote(self,
+        checkid:int,
+        private_note:str=None,
+        public_note:str=None,
+        describe:bool=False
+        ):
+        """Add a public/private note to a check.  Check will be added by the admin account/account API key was retrieved from.
+
+        Args:
+            checkid (int): Check ID
+            private_note (str, optional): Private (technical) note. 
+            public_note (str, optional): Public (customer) note. 
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            dict: Confirmation of note being added
+        """
+        # TODO possibly make this return True/False depending on whether note is added or not
+        response = self._requester(mode='get',endpoint='add_check_note',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def templates(self, #TODO test templates
+        devicetype:str=None,
+        describe:bool=False,          
+        ):
+        """List all of the account's server or workstation monitoring templates.
+
+        Args:
+            devicetype (str, optional): Device type [server, workstation].
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+        response = self._requester(mode='get',endpoint='list_templates',rawParams=locals().copy())
+        return response if describe != True else response
 
     # Antivirus Update Check Information
     
-    def supportedAVs(self):
-        pass
+    def supportedAVs(self, # TODO what is the point of this.
+        describe:bool=False
+        ):
+        """Lists display name and identifier for all supported antivirus products.
+        
+        Args:
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
 
-    def AVDefinitions(self):
-        pass
+        Returns:
+            list: List of supported AVs with ID"""
+
+        response = self._requester(mode='get',endpoint='list_supported_av_products',rawParams=locals().copy())
+        return response['products']['product'] if describe != True else response
+
+    def AVDefinitions(self,
+        product:str, #TODO maybe allow search here and use supported AVs endpoint
+        max_results:int=20,
+        describe:bool=False):
+        """Lists the most recent definition versions and date released for a given AV product.
+
+        Args:
+            product (str): AV product ID (can be retrieved with supportedAVs endpoint)
+            max_results (int, optional): Max number of definitions to return. Defaults to 20.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            list: List of AV definitions with version and date released
+        """
+
+        response = self._requester(mode='get',endpoint='list_av_definitions',rawParams=locals().copy())
+        return response['definitions']['definition'] if describe != True else response
     
-    def AVDefinitionsReleaseDate(self):
-        pass
+    def AVDefinitionsReleaseDate(self, # TODO what is the point of this if the date is already provided in the versions endpoint
+            product:str, # TODO allow searching here?
+            version:str, # TODO Allow 'latest' tag to be used instead of a version?
+            describe:bool=False
+        ):
+        """Given an antivirus product ID and a definition version, returns the date and time a definition was released.
 
-    def AVHistory(self):
-        pass
+
+        Args:
+            product (str): AV product ID (can be retrieved with supportedAVs endpoint)
+            version (str): Version (can be retrieved with AVDefinitions endpoint)
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            dict: Product name, version, release date.
+        """
+
+
+        response = self._requester(mode='get',endpoint='get_av_definition_release_date',rawParams=locals().copy())
+        return response['definition'] if describe != True else response
+    
+    def AVHistory(self, # TODO maybe allow date filtering here? #TODO why did it return 90?
+        deviceid:int, # Claims string in documentation, but all others are int?
+        describe:bool=False
+        ):
+        """List status of Antivirus Update Checks on device for last 60 days.
+
+        Args:
+            deviceid (int): Device ID
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            list: Previous 60 days AV status/history.  Will show status of "UNKNOWN" if AV is not enabled/running
+        """
+
+        
+        response = self._requester(mode='get',endpoint='list_av_history',rawParams=locals().copy())
+        return response['days']['day'] if describe != True else response
     
     # Backup Check History
     
-    def backupHistory(self):
-        pass
+    def backupHistory(self, #TODO test backupHistory
+        deviceid:int,
+        describe:bool=False
+        ):
+        """List status of Backup Checks on device for last 60 days.
 
+        Args:
+            deviceid (int): Device ID
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            list: Previous 60 days backup history.  Will show status of "UNKNOWN" if AV is not enabled/running
+        """
+        
+        response = self._requester(mode='get',endpoint='list_backup_history',rawParams=locals().copy())
+        return response['days']['day'] if describe != True else response
+    
     # Asset Tracking Information
     # https://documentation.n-able.com/remote-management/userguide/Content/asset_tracking_information.htm
     
-    def assetHardware(self):
-        pass
+    def assetHardware(self, #TODO test assetHardware
+        assetid:int,
+        describe:bool=False
+        ):
+        """List all hardware for an asset
 
-    def assetSoftware(self):
-        pass
+        Args:
+            assetid (int): Asset ID (can be gotten from assetDetails using clientid)
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+
+        response = self._requester(mode='get',endpoint='list_all_hardware',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def assetSoftware(self, # TODO test assetSoftware
+        assetid:int,
+        describe:bool=False
+        ):
+        """List all software for an asset
+
+        Args:
+            assetid (int): Asset ID (can be gotten from assetDetails using clientid)
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+
+        response = self._requester(mode='get',endpoint='list_all_software',rawParams=locals().copy())
+        return response if describe != True else response
     
-    def licenseGroups(self):
-        pass
+    def licenseGroups(self, #TODO test licenseGroups
+        describe:bool=False
+        ):
+        """Lists all software license groups for account.
+
+        Args:
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+
+        response = self._requester(mode='get',endpoint='list_license_groups',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def licenseGroupItems(self, # TODO test licenseGroupItems
+        license_group_id:int,
+        describe:bool=False
+        ):
+        """Lists software in a software license group.
+
+        Args:
+            license_group_id (int): License Group ID
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+
+        response = self._requester(mode='get',endpoint='list_license_group_items',rawParams=locals().copy())
+        return response if describe != True else response
     
-    def licenseGroupItems(self):
-        pass
+    def clientLicenseCount(self, # TODO test clientLicenseCount
+        clientid:int,
+        describe:bool=False
+        ):
+        """_summary_
+
+        Args:
+            clientid (int): _description_
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+
+        response = self._requester(mode='get',endpoint='list_client_license_count',rawParams=locals().copy())
+        return response if describe != True else response
     
-    def clientLicenseCount(self):
-        pass
-    
-    def assetLicensedSoftware(self):
-        pass
+    def assetLicensedSoftware(self, # TODO test assetLicensedSoftware
+        assetid:int,
+        describe:bool=False
+        ):
+        """_summary_
+
+        Args:
+            assetid (int): _description_
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+
+        response = self._requester(mode='get',endpoint='list_licensed_software',rawParams=locals().copy())
+        return response if describe != True else response
         
-    def assetDetails(self):
-        pass
+    def assetDetails(self, # TODO assetDetails
+        deviceid:int,
+        describe:bool=False
+        ):
+        """_summary_
+
+        Args:
+            deviceid (int): _description_
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+
+        response = self._requester(mode='get',endpoint='list_device_asset_details',rawParams=locals().copy())
+        return response if describe != True else response
     
     # Settings
     
-    def wallchartSettings(self):
-        pass
+    def wallchartSettings(self, # TODO test wallchartSettings
+        describe:bool=False
+        ):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
     
-    def generalSettings(self):
-        pass
+        response = self._requester(mode='get',endpoint='list_wallchart_settings',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def generalSettings(self, # TODO test generalSettings
+        describe:bool=False
+        ):
+        """_summary_
+
+        Returns:
+            _type_: _description_
+        """
     
+        response = self._requester(mode='get',endpoint='list_general_settings',rawParams=locals().copy())
+        return response if describe != True else response
+
     # Windows Patch Management
     
-    def listPatches(self):
-        pass
+    def listPatches(self, #TODO test listPatches
+        deviceid:int,
+        describe:bool=False
+        ):
 
-    def approvePatches(self):
-        pass
 
-    def doNothingPatches(self):
-        pass
+        response = self._requester(mode='get',endpoint='patch_list_all',rawParams=locals().copy())
+        return response if describe != True else response
 
-    def ignorePatches(self):
-        pass
+    def approvePatches(self, # TODO test approvePatches
+        deviceid:int,
+        patchids:str, # Comma separated
+        describe:bool=False
+        ):
 
-    def reprocessPatches(self):
-        pass
 
-    def retryPatches(self):
-        pass
+        response = self._requester(mode='get',endpoint='patch_approve',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def doNothingPatches(self, # TODO test doNothingPatches
+        deviceid:int,
+        patchids:str, # Comma separated
+        describe:bool=False        
+        ):
+        
+        response = self._requester(mode='get',endpoint='patch_do_nothing',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def ignorePatches(self, # TODO test ignorePatches
+        deviceid:int,
+        patchids:str, # Comma separated
+        describe:bool=False        
+        ):
+        
+        response = self._requester(mode='get',endpoint='patch_ignore',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def reprocessPatches(self, # TODO test reprocessPatches
+        deviceid:int,
+        patchids:str, # Comma separated
+        describe:bool=False        
+        ):
+        
+        response = self._requester(mode='get',endpoint='patch_reprocess',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def retryPatches(self, # TODO test retryPatches
+        deviceid:int,
+        patchids:str, # Comma separated
+        describe:bool=False        
+        ):
+        
+        response = self._requester(mode='get',endpoint='patch_retry',rawParams=locals().copy())
+        return response if describe != True else response
 
     # Managed Antivirus
     
-    def mavQuarantine(self):
+    def deviceMavQuarantine(self):
         pass
     
-    def mavQuarantineRelease(self):
+    def deviceMavQuarantineRelease(self):
         pass
 
-    def mavQuarantineRemove(self):
+    def deviceMavQuarantineRemove(self):
         pass
     
     def mavScanStart(self):
@@ -558,6 +945,9 @@ class NAble:
     def mavScanCancel(self):
         pass
     
+    def mavScanList(self):
+        pass
+    
     def mavScans(self):
         pass
     
@@ -565,4 +955,78 @@ class NAble:
         pass
     
     def mavUpdate(self):
+        pass
+
+    # Backup & Recovery
+    def backupSelectionSize(self, #TODO test backup selection size
+        cliendid:int,
+        siteid:int,
+        deviceid:int,
+        year:int,
+        month:int,
+        describe:bool=False
+        ):
+        """Returns the Backup & Recovery - previously known as Managed Online Backup - (MOB) selection size for the specified device for the entered month and year combination. Please be aware that the backup values stated in this API call are in Bytes.
+
+        Args:
+            cliendid (int): Client ID.
+            siteid (int): Site ID.
+            deviceid (int): Device ID.
+            year (int): Year.
+            month (int): Month (00-12).
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+
+        response = self._requester(mode='get',endpoint='mob/mob_list_selection_size',rawParams=locals().copy())
+        return response if describe != True else response
+    
+    def backupSessions(self, #TODO test backupSessions
+        deviceid:int,
+        describe:bool=False
+        ):
+        """ists all Backup & Recovery - previously known as Managed Online Backup - (MOB) sessions for a device.
+
+        Note: Backups are recorded in batches after the whole batch finishes; once recorded the information about all backup sessions is available for the lifespan of the device, whilst Backup & Recovery remains enabled.
+
+        Please be aware that the backup values stated in this API call are in Bytes. 
+
+        Args:
+            deviceid (int): Device ID.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
+
+        response = self._requester(mode='get',endpoint='list_mob_sessions',rawParams=locals().copy())
+        return response if describe != True else response
+    
+    # Run task now
+    
+    def runTask(self,
+        checkid:int,
+        describe:bool=False
+        ):
+
+        response = self._requester(mode='get',endpoint='task_run_now',rawParams=locals().copy())
+        return response if describe != True else response
+    
+    # List Active Directory Users
+    
+    def activeDirectoryUsers(self, #TODO Find someone to test activeDicectoryUsers.
+        siteid:int,
+        describe:bool=False
+        ):
+
+        response = self._requester(mode='get',endpoint='task_run_now',rawParams=locals().copy())
+        return response if describe != True else response
+    
+    # Custom
+    def searchClients(self,
+        search:str,
+        ):
+        #TODO return client ID, maybe full client endpoint?
         pass
