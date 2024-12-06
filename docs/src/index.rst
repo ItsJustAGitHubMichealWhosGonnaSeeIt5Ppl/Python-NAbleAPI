@@ -91,9 +91,9 @@ It's probably best not to store your API key in your script. Instead, you can cr
 
     NABLE_KEY = os.getenv("NABLE_KEY")
 
-TO BE ADDED
-===========
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 1
+   :caption: Reference
+
+   ref/checksandresults.rst
 
