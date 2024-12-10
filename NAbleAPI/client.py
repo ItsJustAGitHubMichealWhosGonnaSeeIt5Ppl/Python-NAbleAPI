@@ -7,7 +7,7 @@ import xmltodict
 import logging
 
 # # Known issues
-# mobile devices do not work
+# mobile devices may not work
 
 
 #TODO Add a changelog https://keepachangelog.com/en/1.0.0/
@@ -16,11 +16,13 @@ import logging
 #TODO Add typeddict or similar to document responses from items https://peps.python.org/pep-0589/
 #TODO add reference ability for things like clientid, etc.
 #TODO add the API url somewhere in the doc string for easier comparison 
+#TODO add errors somewhere
+#TODO fix bumpver
 
 
 class NAble:
     """NAble Data Extraction API Wrapper
-    Version: 0.0.2
+    Version: 0.0.3
         
     Official Documentation: https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm
     
@@ -32,7 +34,7 @@ class NAble:
         key (str): Your NAble API key
     """
     def _requester(self,mode,endpoint,rawParams=None):
-        """Make requests to NAble API
+        """Make requests to NAble API and format response. Also handles errors.
 
         Args:
             mode (str): Request mode [get,post,delete]
@@ -65,12 +67,15 @@ class NAble:
         
         else: # Valid URL
             if endpoint == 'get_site_installation_package' and ('describe' in paramsDict and paramsDict['describe'] != True): # Some items are returned as bytes object
-                return response.content
+                return response.content 
             else:
                 try:
                     content = xmltodict.parse(response.content)['result'] # Response content
+                except KeyError:
+                    content = xmltodict.parse(response.content)
                 except Exception as e: # BAD BAD BAD but maybe will help me figure out whats gone wrong here
                     raise e
+
             try: # Check status
                 status = content['@status']
             except KeyError: # Sometimes no status is sent, in which case assume its OK
@@ -96,7 +101,7 @@ class NAble:
                 raise Exception(f'Unknown error: {status}')
 
     def __init__(self,region,key,logLevel=None):
-        self.version = '0.0.2' # Remember to update the docstring at the top too!
+        self.version = '0.0.3' # Remember to update the docstring at the top too!
         #TODO allow log level to be set
         
         dashboardURLS = {
@@ -136,7 +141,7 @@ class NAble:
         self._requester(endpoint='list_clients',mode='get')  # Test that key is valid.
         
     def _formatter(self,params):
-        """Formats parameters for request
+        """Formats parameters for request. Removes any parameter with value of None.
 
         Args:
             params (dict): Request parameters
@@ -168,19 +173,36 @@ class NAble:
     
     def clients(self,
         devicetype:str=None,
+        name:str=None,
         describe:bool=False):
-        """Lists all clients.  If devicetype is given, only clients with active devices matching that type will be returned.
+        """Lists all clients.  Optionally, filter by 'devicetype' and/or name.
+        
+        Device types
+        - workstation
+        - server
+        - mobile_device
 
         Args:
-            devicetype (str, optional): Filter by device type [server, workstation, mobile_device].
+            devicetype (str, optional): Filter by device type.
+            name (str, optional): Filter/search for client by name. Helpful if trying to get a specific ID
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
             list: List of clients
         """
-        #TODO add search function here
+        #TODO improve search
         #TODO cache client list
+        #TODO Add IDONLY mode to return only a client anme and ID?
         response = self._requester(mode='get',endpoint='list_clients',rawParams=locals().copy())
+        if name != None and response !=True:
+            popList = []
+            for inxID, client in enumerate(response['client']):
+                if name.lower().strip() not in client['name'].lower().strip():
+                    popList.append(inxID)
+                    
+            popList.reverse() # invert list so highest number is first.
+            for pop in popList:
+                response['client'].pop(pop)
         return response['client'] if describe != True else response
 
     def sites(self,
@@ -189,7 +211,7 @@ class NAble:
         """Lists all sites for a client.
 
         Args:
-            clientid (int): ClientID.
+            clientid (int): Client ID.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
@@ -220,10 +242,12 @@ class NAble:
     def workstations(self,
         siteid:int,
         describe:bool=None):
-        """Lists all workstations for site (including top level asset information if available).
+        """List all workstations for site (including top level asset information if available).
+        
+        This will NOT provide check information details.
 
         Args:
-            ssiteid (:obj:`int`): Site ID.
+            siteid (:obj:`int`): Site ID.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
@@ -326,7 +350,7 @@ class NAble:
             response[devType]['checks']['check'] = [response[devType]['checks']['check']]
         return response[devType] if describe != True else response
     
-    def addClient(self,
+    def addClient(self, 
         name:str,
         timezone:str=None,
         licenseconfig:str=None, #XML
@@ -337,10 +361,29 @@ class NAble:
         outofofficehourssms:str=None,
         describe:bool=False
         ):
-        #TODO figure out if these are POST or GET requests (this one and sites)
-        pass
+        """Create a new client, must at least provide a name.
+
+        Args:
+            name (str): New client name
+            timezone (str, optional): Timezone if different than company. Available timezones can be found here: https://documentation.n-able.com/remote-management/userguide/Content/api_timezones.htm
+            licenseconfig (str, optional): Xml license config.
+            reportconfig (str, optional): Xml report config.
+            officehoursemail (str, optional): Email for in hours alerts. 
+            officehourssms (str, optional): SMS for in hours alerts. 
+            outofofficehoursemail (str, optional): Email for out of hours alerts. 
+            outofofficehourssms (str, optional): SMS for out of hours alerts.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            dict: Status and new client ID if successful.
+        """
+        
+        #TODO add error handling
+        response = self._requester(mode='get',endpoint='add_client',rawParams=locals().copy())
+        return response if describe != True else response
     
-    def addSite(self,
+    
+    def addSite(self, #TODO test addSite
         clientid:int,
         sitename:str,
         router1:str=None,
@@ -349,7 +392,9 @@ class NAble:
         servertemplate:str=None,
         describe:bool=False # Confirm this actually exists 
         ):
-        pass
+        
+        response = self._requester(mode='get',endpoint='add_site',rawParams=locals().copy())
+        return response if describe != True else response
     
     def siteInstallPackage(self,
         endcustomerid:int,
@@ -611,24 +656,27 @@ class NAble:
             dict: Confirmation of note being added
         """
         # TODO possibly make this return True/False depending on whether note is added or not
+        #TODO why does this work with get?
         response = self._requester(mode='get',endpoint='add_check_note',rawParams=locals().copy())
         return response if describe != True else response
 
-    def templates(self, #TODO test templates
+    def templates(self, 
         devicetype:str=None,
         describe:bool=False,          
         ):
-        """List all of the account's server or workstation monitoring templates.
+        """List all monitoring templates. Optionally, filter by device type.
+        
+        
 
         Args:
             devicetype (str, optional): Device type [server, workstation].
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            _type_: _description_
+            list: List of templates with template IDs. No details are provided.
         """
         response = self._requester(mode='get',endpoint='list_templates',rawParams=locals().copy())
-        return response if describe != True else response
+        return response['installation_template'] if describe != True else response
 
     # Antivirus Update Check Information
     
@@ -705,18 +753,21 @@ class NAble:
     
     # Backup Check History
     
-    def backupHistory(self, #TODO test backupHistory
+    def backupHistory(self, #TODO test with Macs
         deviceid:int,
         describe:bool=False
         ):
-        """List status of Backup Checks on device for last 60 days.
+        """Lists status of backup (based on check) for the last 60 (or 90) days.
+        Requires backup check to be present on device.
+        Works with MoB/Cove.
+        May not work with MacOS devices. 
 
         Args:
-            deviceid (int): Device ID
+            deviceid (int): Device ID.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            list: Previous 60 days backup history.  Will show status of "UNKNOWN" if AV is not enabled/running
+            list: Previous 60 days backup history.  Will show status of "UNKNOWN" if backup check is not present.
         """
         
         response = self._requester(mode='get',endpoint='list_backup_history',rawParams=locals().copy())
@@ -844,40 +895,54 @@ class NAble:
     
     # Settings
     
-    def wallchartSettings(self, # TODO test wallchartSettings
+    def wallchartSettings(self,
         describe:bool=False
         ):
-        """_summary_
-
+        """Lists general Wall Chart settings for account including what should and shouldn't be shown.
+        
+        Args:
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+            
         Returns:
-            _type_: _description_
+            dict: Wallchart settings.
         """
     
         response = self._requester(mode='get',endpoint='list_wallchart_settings',rawParams=locals().copy())
-        return response if describe != True else response
+        return response['wallchart'] if describe != True else response
 
-    def generalSettings(self, # TODO test generalSettings
+    def generalSettings(self,
         describe:bool=False
         ):
-        """_summary_
-
+        """Lists general (basic) settings for account including language, whether checks can be cleared, and the timezone.
+        
+        Args:
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+            
         Returns:
-            _type_: _description_
+            dict: General settings.
         """
-    
+        
         response = self._requester(mode='get',endpoint='list_general_settings',rawParams=locals().copy())
-        return response if describe != True else response
+        return response['settings']['items']['general'] if describe != True else response
 
     # Windows Patch Management
     
-    def listPatches(self, #TODO test listPatches
+    def listPatches(self, 
         deviceid:int,
         describe:bool=False
         ):
+        """Get all software patches for a device using the device ID.
 
+        Args:
+            deviceid (int): Device ID
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            list: List of patches (both available and installed).
+        """
 
         response = self._requester(mode='get',endpoint='patch_list_all',rawParams=locals().copy())
-        return response if describe != True else response
+        return response['patches']['patch'] if describe != True else response
 
     def approvePatches(self, # TODO test approvePatches
         deviceid:int,
@@ -926,6 +991,7 @@ class NAble:
         return response if describe != True else response
 
     # Managed Antivirus
+    #TODO add all MAV endpoints
     
     def deviceMavQuarantine(self):
         pass
@@ -958,7 +1024,7 @@ class NAble:
         pass
 
     # Backup & Recovery
-    def backupSelectionSize(self, #TODO test backup selection size
+    def backupSelectionSize(self, #TODO Find someone to test backupSelectionSize
         cliendid:int,
         siteid:int,
         deviceid:int,
@@ -966,6 +1032,7 @@ class NAble:
         month:int,
         describe:bool=False
         ):
+        
         """Returns the Backup & Recovery - previously known as Managed Online Backup - (MOB) selection size for the specified device for the entered month and year combination. Please be aware that the backup values stated in this API call are in Bytes.
 
         Args:
@@ -983,7 +1050,7 @@ class NAble:
         response = self._requester(mode='get',endpoint='mob/mob_list_selection_size',rawParams=locals().copy())
         return response if describe != True else response
     
-    def backupSessions(self, #TODO test backupSessions
+    def backupSessions(self, #TODO Find someone to test backupSessions
         deviceid:int,
         describe:bool=False
         ):
@@ -1024,9 +1091,3 @@ class NAble:
         response = self._requester(mode='get',endpoint='task_run_now',rawParams=locals().copy())
         return response if describe != True else response
     
-    # Custom
-    def searchClients(self,
-        search:str,
-        ):
-        #TODO return client ID, maybe full client endpoint?
-        pass

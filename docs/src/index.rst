@@ -92,7 +92,13 @@ It's probably best not to store your API key in your script. Instead, you can cr
     NABLE_KEY = os.getenv("NABLE_KEY")
 
 .. toctree::
-   :maxdepth: 1
+    :maxdepth: 1
+    :caption: Main
+
+    index.rst
+
+.. toctree::
+   :maxdepth: 2
    :caption: Reference
 
    ref/clientSiteDevices.rst

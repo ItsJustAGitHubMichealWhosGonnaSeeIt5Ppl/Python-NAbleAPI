@@ -22,7 +22,7 @@ pip install NAbleAPI
 
 To use the NAble API, you will need to know your region and have an API key.
 
-1. Download the package (this entire github) and extract it.
+1. Import the package
 2. Get an API key. Follow [these instructions](https://documentation.n-able.com/remote-management/userguide/Content/api_key.htm) to get your API key.
 3. Find your region (see below)
 
@@ -119,7 +119,7 @@ Official NAble documentation page [here](https://documentation.n-able.com/remote
 | list_devices_at_client | Working | clientDevices() | List all workstations or servers for a client |
 | list_device_monitoring_details | Working | deviceDetails() | Get details for a single device | 
 | add_client | Planned | addClient() | Add a client |
-| add_site | Planned | addSite() | Add a site | 
+| add_site | Working | addSite() | Add a site | 
 | get_site_installation_package() | Partially Working | siteInstallPackage | Create/Get a site installation package (returns rawbytes right now) |
 
 ### Checks and results
@@ -136,7 +136,7 @@ Official NAble documentation page [here](https://documentation.n-able.com/remote
 | list_exchange_storage_history | Untested | exchangeStorageHistory() | Get Exchange Storage History |
 | clear_check | Untested | clearCheck() |  Clear a check |
 | add_check_note | Working | addNote() |  Add note to a check |
-| list_templates | Untested | templates() |  List all server/workstation monitoring templates |
+| list_templates | Working | templates() |  List all server/workstation monitoring templates |
 
 ### Anti-Virus Update Check Information
 Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/api_av_info.htm)
@@ -149,33 +149,44 @@ Official NAble documentation page [here](https://documentation.n-able.com/remote
 
 ### List Backup Check History
 Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/list_backup_history.htmm)
-PLANNED
+| Service | Status | Function Name | Description |
+| --- | --- | --- | --- |
+| list_backup_history | Untested | backupHistory() | Get last 60 days of backup history for device |
 
 ### Asset Tracking Information
 Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/asset_tracking_information.htm)
-PLANNED
+| Service | Status | Function Name | Description |
+| --- | --- | --- | --- |
 
 ### Settings
 Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/settings.htm)
-PLANNED
+| Service | Status | Function Name | Description |
+| --- | --- | --- | --- |
+| list_wallchart_settings | Working | wallchartSettings() | Get general wallchart settings |
+| list_general_settings | Working | generalSettings() | Get general account settings |
 
 ### Patch Management
 Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/patch_management.htm)
-PLANNED
+| Service | Status | Function Name | Description |
+| --- | --- | --- | --- |
 
 ### Managed Anti-Virus
 Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/managed_antivirus2.htm)
-PLANNED
+| Service | Status | Function Name | Description |
+| --- | --- | --- | --- |
 
 ### Backup & Recovery
 Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/api_mob_over.htm)
-PLANNED
+| Service | Status | Function Name | Description |
+| --- | --- | --- | --- |
 
 ### Run Task Now
 Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/run_task_now.htm)
-PLANNED
+| Service | Status | Function Name | Description |
+| --- | --- | --- | --- |
 
 ### List Active Directory Users
 Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/list_active_directory_users.htm)
-PLANNED
+| Service | Status | Function Name | Description |
+| --- | --- | --- | --- |
 
