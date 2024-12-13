@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4] - 2024-12-13
+
+### Added
+
+- Windows Patch Management endpoints
+- docstring for all Windows Patch Management endpoints
+- ReadTheDocs page for Windows Patch Management
+
+### Fixed
+
+### Changed
+
+- Formatter can now handle patch IDs sent as a list, or a string.
+
+### Removed
+
+
 ## [0.0.3] - 2024-12-10
 
 ### Added
@@ -16,7 +33,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - addClient function.
 - Docstring for addClient, wallchartSettings, generalSettings, listPatches
 
- 
 ### Fixed
 
 - Possible error when response content does not contain 'result' key.
@@ -32,3 +48,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - searchClient placeholder (integrating into clients)
  
+ ## [0.0.0] - Template
+
+### Added
+
+### Fixed
+
+### Changed
+
+### Removed
