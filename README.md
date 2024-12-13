@@ -176,6 +176,7 @@ These may be moved to their own subclass in the future!
 | patch_ignore | Working | ignorePatches() | Ignore patch(es) for a device |
 | patch_reprocess | Working | reprocessPatches() | Reprocess patch(es) for a device |
 | patch_retry | Working | retryPatches() | Retry patch(es) for a device |
+
 ### Managed Anti-Virus
 Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/managed_antivirus2.htm)
 | Service | Status | Function Name | Description |
