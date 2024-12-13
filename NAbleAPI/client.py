@@ -10,13 +10,12 @@ import logging
 # mobile devices may not work
 
 
-#TODO Add a changelog https://keepachangelog.com/en/1.0.0/
 #TODO add logger
 #TODO add testing
 #TODO Add typeddict or similar to document responses from items https://peps.python.org/pep-0589/
 #TODO add reference ability for things like clientid, etc.
 #TODO add the API url somewhere in the doc string for easier comparison 
-#TODO add errors somewhere
+#TODO Document errors in readthedocs
 #TODO fix bumpver
 
 
@@ -154,6 +153,8 @@ class NAble:
         popList = ['self','endpoint','includeDetails'] # Things that should not be added to params
         if 'describe' in paramsToAdd and paramsToAdd['describe'] != True: # Remove describe unless its true
             popList += ['describe']
+        if 'patchids' in paramsToAdd and isinstance(paramsToAdd['patchids'],list): # Reformat patchIDs sent as a list to a comma separated string.
+            paramsToAdd['patchids'] = ','.join(map(str, paramsToAdd['patchids']))
             
         for popMe in popList:
             try: # Skips nonexistent keys
@@ -931,7 +932,24 @@ class NAble:
         deviceid:int,
         describe:bool=False
         ):
-        """Get all software patches for a device using the device ID.
+        """Get all patch information for a device using the device ID.
+        
+        Included in the response is the patch status, and the patch policy currently applied.  Below is a list of Polices, Status, and their IDs.
+        
+        Policies and IDs
+        - Approve: 2 or 66 if set by user (via API or dashbaord)
+        - Do Nothing: 4 or 68 if set by user (via API or dashbaord)
+        - Ignore: ? or 65 if set by user (via API or dashbaord).  If you find a patch ignored by a policy, please send me the ID!
+        
+        Statuses and IDs 
+        - Missing: 1
+        - Pending: 2
+        - Installed: 8
+        - Failed: 16
+        - Ignored: 23
+        - Reboot Required: 64
+        
+        If you find additional statuses or IDs, please let me know!
 
         Args:
             deviceid (int): Device ID
@@ -943,52 +961,122 @@ class NAble:
 
         response = self._requester(mode='get',endpoint='patch_list_all',rawParams=locals().copy())
         return response['patches']['patch'] if describe != True else response
-
-    def approvePatches(self, # TODO test approvePatches
+    
+    #TODO figure out what should be returned for patch management calls since by default nothing is sent back. Maybe return the patch information from listPatches for the ones that were modified?
+    def approvePatches(self, #TODO test single patch sent as list
         deviceid:int,
-        patchids:str, # Comma separated
+        patchids:list, # Comma separated
         describe:bool=False
         ):
+        """Approve patch(es) for a specific device. Approving a patch that has already been approved does not cause an issue.  
+        
+        Patches set to Approve will install at the next scheduled installation time as set by the devices Patch Management policy.
+        
+        Patches that are approved using this will show policy ID 66 instead of 2.
+
+        Args:
+            deviceid (int): Device ID
+            patchids (str,list): Patch ID(s).  Use a list or comma separated string to send more than 1 at once.
+
+        Returns:
+            dict: Nothing of value is returned. May remove this
+        """
 
 
         response = self._requester(mode='get',endpoint='patch_approve',rawParams=locals().copy())
         return response if describe != True else response
 
-    def doNothingPatches(self, # TODO test doNothingPatches
+    def doNothingPatches(self,
         deviceid:int,
         patchids:str, # Comma separated
         describe:bool=False        
         ):
+        """Set patch(es) to "Do Nothing" for a specific device.
+        
+        Patches set to "Do Nothing" will be installed according to the applied Patch Management policy.
+        
+        Patches that are changed using this will show policy ID 68 instead of 4.
+
+        Args:
+            deviceid (int): Device ID
+            patchids (str,list): Patch ID(s).  Use a list or comma separated string to send more than 1 at once.
+
+        Returns:
+            dict: Nothing of value is returned.
+        """
         
         response = self._requester(mode='get',endpoint='patch_do_nothing',rawParams=locals().copy())
-        return response if describe != True else response
+        return response['msg'] if describe != True else response
 
-    def ignorePatches(self, # TODO test ignorePatches
+    def ignorePatches(self,
         deviceid:int,
         patchids:str, # Comma separated
         describe:bool=False        
         ):
+        """Ignore patch(es) for a specific device.
+        
+        Patches set to "Ignore" will be explicitely blocked (ignored) and will not show as "missing" in reports or dashboard.
+        
+        Patches that are changed using this will show policy ID of 65.
+
+        Args:
+            deviceid (int): Device ID
+            patchids (str,list): Patch ID(s).  Use a list or comma separated string to send more than 1 at once.
+
+        Returns:
+            dict: Nothing of value is returned.
+        """
         
         response = self._requester(mode='get',endpoint='patch_ignore',rawParams=locals().copy())
-        return response if describe != True else response
+        return response['msg'] if describe != True else response
 
-    def reprocessPatches(self, # TODO test reprocessPatches
+    def reprocessPatches(self,
         deviceid:int,
         patchids:str, # Comma separated
         describe:bool=False        
         ):
+        """Reprocess failed patch(es) for a specific device.
+        
+        If a patch has reviously failed to install, use this to retry the install. Patches will attempt to install at the next scheduled installation time as set by the devices Patch Management policy.
+        
+        Failed Patches will show status ID 16. The policy ID will not change if a patch has failed to install. Patches that are changed using this will show their original polcy, and status ID 2 (pending)
+        
+        If you try to reprocess a patch that has not failed to install (installed, pending, ignored) you will get a response stating "Patches already applied: {PATCH IDS}".
+
+        Args:
+            deviceid (int): Device ID
+            patchids (str,list): Patch ID(s).  Use a list or comma separated string to send more than 1 at once.
+
+        Returns:
+            str: Additional information (if any) about selected patches.
+        """
         
         response = self._requester(mode='get',endpoint='patch_reprocess',rawParams=locals().copy())
-        return response if describe != True else response
+        return response['msg'] if describe != True else response
 
-    def retryPatches(self, # TODO test retryPatches
+    def retryPatches(self, # TODO confirm if this is any different than reprocess
         deviceid:int,
         patchids:str, # Comma separated
         describe:bool=False        
         ):
+        """Retry failed patch(es) for a specific device. Appears to do exactply the same thing as reprocess, even provides the same messages.
+        
+        If a patch has reviously failed to install, use this to retry the install. Patches will try to install at the next scheduled installation time as set by the devices Patch Management policy.
+        
+        Failed Patches will show status ID 16. The policy ID will not change if a patch has failed to install. Patches that are changed using this will show their original polcy, and status ID 2 (pending)
+        
+        If you try to reprocess a patch that has not failed to install (installed, pending, ignored) you will get a response stating "Patches already applied: {PATCH IDS}".
+
+        Args:
+            deviceid (int): Device ID
+            patchids (str,list): Patch ID(s).  Use a list or comma separated string to send more than 1 at once.
+
+        Returns:
+            str: Additional information (if any) about selected patches.
+        """
         
         response = self._requester(mode='get',endpoint='patch_retry',rawParams=locals().copy())
-        return response if describe != True else response
+        return response['msg'] if describe != True else response
 
     # Managed Antivirus
     #TODO add all MAV endpoints
@@ -1091,3 +1179,5 @@ class NAble:
         response = self._requester(mode='get',endpoint='task_run_now',rawParams=locals().copy())
         return response if describe != True else response
     
+class Patches(NAble): # TODO move Patch management to its own class?
+    pass
