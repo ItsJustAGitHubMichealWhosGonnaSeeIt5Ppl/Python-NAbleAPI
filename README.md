@@ -170,6 +170,7 @@ Official NAble documentation page [here](https://documentation.n-able.com/remote
 These may be moved to their own subclass in the future!
 
 | Service | Status | Function Name | Description |
+| --- | --- | --- | --- |
 | patch_list_all | Working | listPatches() | List all patches for a device |
 | patch_approve | Working | approvePatches() | Approve patch(es) for a device |
 | patch_do_nothing | Working | doNothingPatches() | Do nothing on patch(es) for a device |
