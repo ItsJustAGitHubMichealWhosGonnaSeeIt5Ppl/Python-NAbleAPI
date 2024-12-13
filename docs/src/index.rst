@@ -1,3 +1,4 @@
+.. _index:
 .. Python-NAbleAPI documentation master file, created by
    sphinx-quickstart on Fri Dec  6 13:38:16 2024.
    You can adapt this file completely to your liking, but it should at least
@@ -93,13 +94,14 @@ It's probably best not to store your API key in your script. Instead, you can cr
 
 .. toctree::
     :maxdepth: 1
-    :caption: Main
-
+    :caption: General Usage
     index.rst
+    
 
 .. toctree::
    :maxdepth: 2
    :caption: Reference
 
    ref/clientSiteDevices.rst
+   ref/patches.rst
 
