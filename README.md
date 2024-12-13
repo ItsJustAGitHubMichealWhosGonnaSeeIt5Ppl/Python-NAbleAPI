@@ -166,9 +166,16 @@ Official NAble documentation page [here](https://documentation.n-able.com/remote
 
 ### Patch Management
 Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/patch_management.htm)
-| Service | Status | Function Name | Description |
-| --- | --- | --- | --- |
 
+These may be moved to their own subclass in the future!
+
+| Service | Status | Function Name | Description |
+| patch_list_all | Working | listPatches() | List all patches for a device |
+| patch_approve | Working | approvePatches() | Approve patch(es) for a device |
+| patch_do_nothing | Working | doNothingPatches() | Do nothing on patch(es) for a device |
+| patch_ignore | Working | ignorePatches() | Ignore patch(es) for a device |
+| patch_reprocess | Working | reprocessPatches() | Reprocess patch(es) for a device |
+| patch_retry | Working | retryPatches() | Retry patch(es) for a device |
 ### Managed Anti-Virus
 Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/managed_antivirus2.htm)
 | Service | Status | Function Name | Description |
