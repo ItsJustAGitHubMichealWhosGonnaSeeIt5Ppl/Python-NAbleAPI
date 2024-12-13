@@ -20,8 +20,8 @@ import logging
 
 
 class NAble:
-    """NAble Data Extraction API Wrapper
-    Version: 0.0.3
+    f"""NAble Data Extraction API Wrapper
+    Version: 0.0.4
         
     Official Documentation: https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm
     
@@ -100,7 +100,7 @@ class NAble:
                 raise Exception(f'Unknown error: {status}')
 
     def __init__(self,region,key,logLevel=None):
-        self.version = '0.0.3' # Remember to update the docstring at the top too!
+        self.version = '0.0.4' # Remember to update the docstring at the top too!
         #TODO allow log level to be set
         
         dashboardURLS = {
