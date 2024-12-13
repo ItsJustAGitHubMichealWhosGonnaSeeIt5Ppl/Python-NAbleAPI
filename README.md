@@ -6,7 +6,6 @@ The official API documentation from NAble can be found [here](https://documentat
 
 NOTE:  
 - This is still in extremely early stages of development, function names may change! 
-- Most functions have docstrings, but proper documentation has not yet been created.
 
 ## Table Of Contents
 *I don't know how to make this yet, so it's Coming Soon*
