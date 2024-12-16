@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.5] - 2024-12-16
+
+### Added
+
+
+- Link to documentation in workstations docstring.
+- assetHardware, assetSoftware, licenseGroups, licenseGroupItems, clientLicenseCount, assetDetails, edrPresent methods
+- docstring for addSite, assetHardware, assetSoftware, licenseGroups, licenseGroupItems, clientLicenseCount, assetDetails, edrPresent
+- experimentalChecks toggle for clientDevices and deviceDetails
+- Experimental checks section under device details in documentation.
+
+### Fixed
+
+- Missing and incorrect information documentation for sites, clients, and workstations.
+- Issue with clients response if describe was set to True and a name was still sent.
+
+### Changed
+
+- Tested addSite method.
+- docstring for listPatches to include more IDs
+
+
+### Removed
+
+
 ## [0.0.4] - 2024-12-13
 
 ### Added
@@ -48,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - searchClient placeholder (integrating into clients)
  
- ## [0.0.0] - Template
+## [0.0.0] - Template
 
 ### Added
 
