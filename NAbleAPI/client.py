@@ -14,14 +14,14 @@ import logging
 #TODO add testing
 #TODO Add typeddict or similar to document responses from items https://peps.python.org/pep-0589/
 #TODO add reference ability for things like clientid, etc.
-#TODO add the API url somewhere in the doc string for easier comparison 
 #TODO Document errors in readthedocs
 #TODO fix bumpver
+#TODO use asset software search to check for SentinalOne!
 
 
 class NAble:
     f"""NAble Data Extraction API Wrapper
-    Version: 0.0.4
+    Version: 0.0.5
         
     Official Documentation: https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm
     
@@ -43,7 +43,6 @@ class NAble:
         Returns:
             dict: Partially formatted API response
         """
-        
         
         url = self.queryUrlBase + endpoint # Set URL for requests
         
@@ -100,8 +99,8 @@ class NAble:
                 raise Exception(f'Unknown error: {status}')
 
     def __init__(self,region,key,logLevel=None):
-        self.version = '0.0.4' # Remember to update the docstring at the top too!
-        #TODO allow log level to be set
+        self.version = '0.0.5' # Remember to update the docstring at the top too!
+        #TODO Make LogLevel actually do something
         
         dashboardURLS = {
             ('americas','ams'): 'www.am.remote.management', # Untested
@@ -195,7 +194,7 @@ class NAble:
         #TODO cache client list
         #TODO Add IDONLY mode to return only a client anme and ID?
         response = self._requester(mode='get',endpoint='list_clients',rawParams=locals().copy())
-        if name != None and response !=True:
+        if describe != True and name != None and response !=True:
             popList = []
             for inxID, client in enumerate(response['client']):
                 if name.lower().strip() not in client['name'].lower().strip():
@@ -246,6 +245,8 @@ class NAble:
         """List all workstations for site (including top level asset information if available).
         
         This will NOT provide check information details.
+        
+        N-Able documentation: https://documentation.n-able.com/remote-management/userguide/Content/listing_workstations_.htm
 
         Args:
             siteid (:obj:`int`): Site ID.
@@ -280,13 +281,16 @@ class NAble:
         clientid:int,
         devicetype:str,
         describe:bool=False,
-        includeDetails:bool=False):
+        includeDetails:bool=False,
+        experimentalChecks:bool=False
+        ):
         """Lists all devices of type 'server/workstation' for a client.
 
         Args:
             clientid (:obj:`int`): Client ID.
             devicetype (str): Device type. [server, workstation, mobile_device].
             includeDetails (bool, optional): Include full device details for all devices. Defaults to False.
+            experimentalChecks (bool, optional): Whether to try experimental checks. includeDetails must be True. More information can be found in the documentation. Defaults to False.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
             
 
@@ -320,7 +324,7 @@ class NAble:
                             checkCount = device['checkcount']
                             webProtect = device['webprotection']
                             riskInt = device['riskintelligence']
-                            device = self.deviceDetails(deviceid=device['id'])
+                            device = self.deviceDetails(deviceid=device['id'],experimentalChecks=experimentalChecks)
                             # Re-add mising items
                             device['status'] = devStatus
                             device['checkcount'] = checkCount
@@ -334,11 +338,13 @@ class NAble:
     
     def deviceDetails(self,
         deviceid:int,
+        experimentalChecks:bool=False,
         describe:bool=False):
         """Lists all monitoring information for the device (server or workstation)
 
         Args:
             deviceid (:obj:`int`): Device ID.
+            experimentalChecks (bool, optional): Whether to try experimental checks. More information can be found in the documentation. Defaults to False.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
@@ -347,8 +353,13 @@ class NAble:
         response = self._requester(mode='get',endpoint='list_device_monitoring_details',rawParams=locals().copy())
 
         devType = 'workstation' if 'workstation' in response.keys() else 'server' # Allows device object to be returned as a dictionary
+        
         if int(response[devType]['checks']['@count']) > 0 and isinstance(response[devType]['checks']['check'], dict): # Convert single check from dict to list for consistency
             response[devType]['checks']['check'] = [response[devType]['checks']['check']]
+            
+        if experimentalChecks: # Run experimental Checks
+            response[devType]['edr'] = str(int(self.edrPresent(deviceid)['installed'])) # Make value consistent with everything else, I know its dumb but whatever
+            
         return response[devType] if describe != True else response
     
     def addClient(self, 
@@ -365,7 +376,7 @@ class NAble:
         """Create a new client, must at least provide a name.
 
         Args:
-            name (str): New client name
+            name (str): New client name.
             timezone (str, optional): Timezone if different than company. Available timezones can be found here: https://documentation.n-able.com/remote-management/userguide/Content/api_timezones.htm
             licenseconfig (str, optional): Xml license config.
             reportconfig (str, optional): Xml report config.
@@ -376,7 +387,7 @@ class NAble:
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            dict: Status and new client ID if successful.
+            dict: Status and new client ID if successful. 
         """
         
         #TODO add error handling
@@ -384,16 +395,29 @@ class NAble:
         return response if describe != True else response
     
     
-    def addSite(self, #TODO test addSite
+    def addSite(self, 
         clientid:int,
         sitename:str,
         router1:str=None,
         router2:str=None,
-        workstationtemplate:str=None,
+        workstationtemplate:str='inherit',
         servertemplate:str=None,
-        describe:bool=False # Confirm this actually exists 
+        describe:bool=False
         ):
-        
+        """Create a new site for a client.
+
+        Args:
+            sitename (str): New Site Name.
+            router1 (str, optional): Primary router IP address.
+            router2 (str, optional): Secondary router IP address.
+            workstationtemplate (str, optional): Template ID of default workstation template or "inherit" to inherit the site template. Defaults to inherit. A list of templates and their IDs can be gotten using templates()
+            servertemplate (str, optional):  Template ID of default server template or "inherit" to inherit the site template. Defaults to inherit. A list of templates and their IDs can be gotten using templates()
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            dict:  Status and site ID is successful. 
+        """
+        #TODO add better error handling
         response = self._requester(mode='get',endpoint='add_site',rawParams=locals().copy())
         return response if describe != True else response
     
@@ -754,7 +778,7 @@ class NAble:
     
     # Backup Check History
     
-    def backupHistory(self, #TODO test with Macs
+    def backupHistory(self,
         deviceid:int,
         describe:bool=False
         ):
@@ -777,97 +801,124 @@ class NAble:
     # Asset Tracking Information
     # https://documentation.n-able.com/remote-management/userguide/Content/asset_tracking_information.htm
     
-    def assetHardware(self, #TODO test assetHardware
+    def assetHardware(self, 
         assetid:int,
         describe:bool=False
         ):
-        """List all hardware for an asset
+        """Get all hardware for an asset.
+        
+        Included in each hardware item will be a hardware ID and hardware type.  Hardware types listed below
+        
+        Hardware Types:
+        
+        - 1: Network Adapter
+        - 2: BIOS
+        - 3: Sound device
+        - 4: Motherboard
+        - 5: Keyboard
+        - 6: Pointing device
+        - 7: Monitor
+        - 8: Video Controller
+        - 9: Disk Drive
+        - 10: Logical Disk
+        - 11: Physical Memory
+        - 12: Cache Memory
+        - 13: Processor
+        - 14: Tape Drive
+        - 15: Optical Drive
+        - 16: Floppy Disk Drive (yes, really)
+        
+        Note: Manufacturer may show as None for some components on Apple devices.
 
         Args:
-            assetid (int): Asset ID (can be gotten from assetDetails using clientid)
+            assetid (int): Asset ID. Can be gotten in using workstations() under 'assetid' or by using assetDetails() with a device ID.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            _type_: _description_
+            list: List of asset hardware.
         """
 
         response = self._requester(mode='get',endpoint='list_all_hardware',rawParams=locals().copy())
-        return response if describe != True else response
+        return response['hardware'] if describe != True else response
 
-    def assetSoftware(self, # TODO test assetSoftware
+    def assetSoftware(self,
         assetid:int,
         describe:bool=False
         ):
-        """List all software for an asset
+        """Get all software for an asset.
+        
+        Note:
+        
+        - Version and install date may not work on Apple devices.
 
         Args:
-            assetid (int): Asset ID (can be gotten from assetDetails using clientid)
+            assetid (int): Asset ID. Can be gotten in using workstations() under 'assetid' or by using assetDetails() with a device ID.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            _type_: _description_
+            list: List of asset software.
         """
 
         response = self._requester(mode='get',endpoint='list_all_software',rawParams=locals().copy())
-        return response if describe != True else response
+        return response['software'] if describe != True else response
     
-    def licenseGroups(self, #TODO test licenseGroups
+    def licenseGroups(self,
         describe:bool=False
         ):
-        """Lists all software license groups for account.
+        """Get all software license groups for account/tenant.
 
         Args:
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            _type_: _description_
+            list: List of license groups and IDs
         """
 
         response = self._requester(mode='get',endpoint='list_license_groups',rawParams=locals().copy())
-        return response if describe != True else response
+        return response['license_group'] if describe != True else response
 
-    def licenseGroupItems(self, # TODO test licenseGroupItems
+    def licenseGroupItems(self,
         license_group_id:int,
         describe:bool=False
         ):
-        """Lists software in a software license group.
+        """Get software in a software license group.
 
         Args:
-            license_group_id (int): License Group ID
+            license_group_id (int): License Group ID.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            _type_: _description_
+            dict: License Software group information (very limited)
         """
-
+        # TODO dig into this more, what is the point?
         response = self._requester(mode='get',endpoint='list_license_group_items',rawParams=locals().copy())
-        return response if describe != True else response
+        return response['license_group_item'] if describe != True else response
     
-    def clientLicenseCount(self, # TODO test clientLicenseCount
+    def clientLicenseCount(self,
         clientid:int,
         describe:bool=False
         ):
-        """_summary_
+        """Get client software license counts.
 
         Args:
-            clientid (int): _description_
+            clientid (int): Client ID.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            _type_: _description_
+            list: License counts for software?
         """
 
         response = self._requester(mode='get',endpoint='list_client_license_count',rawParams=locals().copy())
-        return response if describe != True else response
+        return response['license_count'] if describe != True else response
     
-    def assetLicensedSoftware(self, # TODO test assetLicensedSoftware
+    def assetLicensedSoftware(self, # TODO test assetLicensedSoftware (find an asset that is using this correctly)
         assetid:int,
         describe:bool=False
         ):
         """_summary_
 
         Args:
-            assetid (int): _description_
+            assetid (int): Asset ID. Can be gotten in using workstations() under 'assetid' or by using assetDetails() with a device ID.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
@@ -877,20 +928,22 @@ class NAble:
         response = self._requester(mode='get',endpoint='list_licensed_software',rawParams=locals().copy())
         return response if describe != True else response
         
-    def assetDetails(self, # TODO assetDetails
+    def assetDetails(self, 
         deviceid:int,
         describe:bool=False
         ):
-        """_summary_
+        """Get device asset details by device ID.
+        
+        Includes some software and hardware asset details.  These details are NOT the same as the ones provided from the dedicated endpoints!
 
         Args:
-            deviceid (int): _description_
+            deviceid (int): Device ID.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            _type_: _description_
+            dict: Asset details including asset ID, asset hardware, and asset software.
         """
-
+        #TODO cleanup response as it contains @host, @status, and @created for some reason. Fucking why
         response = self._requester(mode='get',endpoint='list_device_asset_details',rawParams=locals().copy())
         return response if describe != True else response
     
@@ -928,7 +981,7 @@ class NAble:
 
     # Windows Patch Management
     
-    def listPatches(self, 
+    def listPatches(self, #TODO fix list formatting for Policies and Status IDs
         deviceid:int,
         describe:bool=False
         ):
@@ -937,13 +990,17 @@ class NAble:
         Included in the response is the patch status, and the patch policy currently applied.  Below is a list of Polices, Status, and their IDs.
         
         Policies and IDs
+        
+        - Ignore: 1 or 65 if set by user (via API or dashbaord).  If you find a patch ignored by a policy, please send me the ID!
         - Approve: 2 or 66 if set by user (via API or dashbaord)
         - Do Nothing: 4 or 68 if set by user (via API or dashbaord)
-        - Ignore: ? or 65 if set by user (via API or dashbaord).  If you find a patch ignored by a policy, please send me the ID!
         
-        Statuses and IDs 
+        
+        Statuses and IDs
+        
         - Missing: 1
         - Pending: 2
+        - Queued: 4
         - Installed: 8
         - Failed: 16
         - Ignored: 23
@@ -963,7 +1020,7 @@ class NAble:
         return response['patches']['patch'] if describe != True else response
     
     #TODO figure out what should be returned for patch management calls since by default nothing is sent back. Maybe return the patch information from listPatches for the ones that were modified?
-    def approvePatches(self, #TODO test single patch sent as list
+    def approvePatches(self,
         deviceid:int,
         patchids:list, # Comma separated
         describe:bool=False
@@ -1178,6 +1235,43 @@ class NAble:
 
         response = self._requester(mode='get',endpoint='task_run_now',rawParams=locals().copy())
         return response if describe != True else response
+
+    # CUSTOM METHODS
     
-class Patches(NAble): # TODO move Patch management to its own class?
-    pass
+    def edrPresent(self,
+        deviceid:int
+        ):
+        """Check if EDR is present on a device.
+        
+        Note:
+        
+        - Install date and version may not work on Apple devices.
+        
+        Args:
+            deviceid (int): Device ID.
+
+        Returns:
+            dict: Whether EDR is installed, if EDR is installed a version and install date will also be provided
+        """
+        
+        edrNames = ['Sentinel Agent','SentinelOne Extensions'] 
+        edrCatIDs = ['2244686'] # 2244686 = Mac ID
+        
+        response = {'installed': False, # Create response object and set information to False/None for consistency
+                    'version': None,
+                    'installDate':None} 
+        assetSoftware = self.assetDetails(deviceid=deviceid)['software']['item']
+        
+        for software in assetSoftware: # scan through software
+            if software['name'] in edrNames and software['deleted'] == '0': # EDR is on the list and not marked as deleted:
+                response['installed'] = True
+                response['version'] = software['version']
+                response['installDate'] = software['install_date']
+                break
+        
+        return response
+
+
+    
+#class Patches(NAble): # TODO move Patch management to its own class?
+#    pass
