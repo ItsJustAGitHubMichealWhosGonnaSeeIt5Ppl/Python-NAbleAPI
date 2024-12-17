@@ -7,10 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.0.5] - 2024-12-16
+## [0.0.6] - 2024-12-17
 
 ### Added
 
+- Format handling for guids (mav), details (mav), and av type (mav)
+- MAV Endpoints and docstrings
+- Missing endpoints to Readme.md
+
+### Fixed
+
+- Status handling for MAV responses, as some use FAIL
+- Missing describe param in docstrings for a few endpoints
+
+### Changed
+
+
+
+### Removed
+
+## [0.0.5] - 2024-12-16
+
+### Added
 
 - Link to documentation in workstations docstring.
 - assetHardware, assetSoftware, licenseGroups, licenseGroupItems, clientLicenseCount, assetDetails, edrPresent methods
