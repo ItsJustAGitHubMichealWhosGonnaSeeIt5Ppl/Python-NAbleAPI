@@ -117,7 +117,7 @@ Official NAble documentation page [here](https://documentation.n-able.com/remote
 | list_agentless_assets | Working | agentlessAssets() | List agentless assets at a site |
 | list_devices_at_client | Working | clientDevices() | List all workstations or servers for a client |
 | list_device_monitoring_details | Working | deviceDetails() | Get details for a single device | 
-| add_client | Planned | addClient() | Add a client |
+| add_client | Working | addClient() | Add a client |
 | add_site | Working | addSite() | Add a site | 
 | get_site_installation_package() | Partially Working | siteInstallPackage | Create/Get a site installation package (returns rawbytes right now) |
 
@@ -133,9 +133,9 @@ Official NAble documentation page [here](https://documentation.n-able.com/remote
 | list_performance_history | Untested | performanceHistory() |  Get performance history of a device |
 | list_drive_space_history | Working | driveSpaceHistory() |  Get Device Storage History |
 | list_exchange_storage_history | Untested | exchangeStorageHistory() | Get Exchange Storage History |
-| clear_check | Untested | clearCheck() |  Clear a check |
-| add_check_note | Working | addNote() |  Add note to a check |
-| list_templates | Working | templates() |  List all server/workstation monitoring templates |
+| clear_check | Untested | clearCheck() | Clear a check |
+| add_check_note | Working | addNote() | Add note to a check |
+| list_templates | Working | templates() | List all server/workstation monitoring templates |
 
 ### Anti-Virus Update Check Information
 Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/api_av_info.htm)
@@ -156,6 +156,15 @@ Official NAble documentation page [here](https://documentation.n-able.com/remote
 Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/asset_tracking_information.htm)
 | Service | Status | Function Name | Description |
 | --- | --- | --- | --- |
+| list_all_hardware | Working | assetHardware() | Get all hardware for an asset |
+| list_all_software | Working | assetSoftware() | Get all software for an asset |
+| list_license_groups | Working | licenseGroups() | Get software license groups for account |
+| list_license_groups | Working | licenseGroupItems() | Get all software license groups for account/tenant |
+| list_license_group_items | Working | clientLicenseCount() | Get software in a software license group |
+| list_client_license_count | Untested | assetLicensedSoftware() | Get client software license counts |
+| list_device_asset_details | Working | assetDetails() | Get asset information from device ID |
+
+
 
 ### Settings
 Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/settings.htm)
@@ -176,12 +185,24 @@ These may be moved to their own subclass in the future!
 | patch_do_nothing | Working | doNothingPatches() | Do nothing on patch(es) for a device |
 | patch_ignore | Working | ignorePatches() | Ignore patch(es) for a device |
 | patch_reprocess | Working | reprocessPatches() | Reprocess patch(es) for a device |
-| patch_retry | Working | retryPatches() | Retry patch(es) for a device |
+| patch_retry | Working | retryPatches() | Retry patch(es) for a device (think this is the same as reprocess) |
 
 ### Managed Anti-Virus
 Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/managed_antivirus2.htm)
 | Service | Status | Function Name | Description |
 | --- | --- | --- | --- |
+| mav_quarantine_list | Untested | mavQuarantine() | Get quarantined threats for a device |
+| mav_quarantine_release | Untested | mavQuarantineRelease() | Release threat(s) from Managed Antivirus quarantine |
+| mav_quarantine_remove | Untested | mavQuarantineRemove() | Remove threat(s) from Managed Antivirus quarantine |
+| mav_scan_start | Working | mavScanStart() | Start quick scan on a device |
+| mav_scan_pause | Working | mavScanPause() | Pause scan on a device |
+| mav_scan_resume | Working | mavScanResume() | Resume/unpause scan on a device |
+| mav_scan_cancel | Working | mavScanCancel() | Cancel scan on a device |
+| mav_scan_device_list | Working | mavScanList() | Get a list of scans for a device |
+| list_mav_scans | Working | mavScans() | Get a list of scans for a device |
+| list_mav_threats | Working | mavThreats() | Get the most recent occurence of each threat found on a device |
+| list_mav_quarantine | Untested | mavQuarantineList() | ??? |
+| mav_definitions_update | Working | mavUpdate() | Update the bitdefender definitions on a device |
 
 ### Backup & Recovery
 Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/api_mob_over.htm)
