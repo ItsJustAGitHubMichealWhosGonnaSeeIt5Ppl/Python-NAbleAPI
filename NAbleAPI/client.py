@@ -79,7 +79,7 @@ class NAble:
             except KeyError: # Sometimes no status is sent, in which case assume its OK
                 status = 'OK'
             
-            if status == 'OK': # Valid key/request
+            if status == 'OK' or endpoint.startswith('mav'): # Valid key/request # Mav likes to return this shit
                 if 'items' in content: # Check for 'items' list in content keys.
                     return content['items']
                 elif 'describe' in paramsDict and paramsDict['describe']: 
@@ -87,7 +87,7 @@ class NAble:
                 else: # Does not have items tag, so return without
                     return content 
                     
-            elif status == 'FAIL':
+            elif status == 'FAIL': 
                 if int(content['error']['errorcode']) == 3: # Login failed, invalid key
                     raise ValueError(f'Login failed. Your region or API key is wrong.')
                 elif int(content['error']['errorcode']) == 4: 
@@ -152,8 +152,16 @@ class NAble:
         popList = ['self','endpoint','includeDetails'] # Things that should not be added to params
         if 'describe' in paramsToAdd and paramsToAdd['describe'] != True: # Remove describe unless its true
             popList += ['describe']
+        
+        #TODO make the list to string converter generic
         if 'patchids' in paramsToAdd and isinstance(paramsToAdd['patchids'],list): # Reformat patchIDs sent as a list to a comma separated string.
             paramsToAdd['patchids'] = ','.join(map(str, paramsToAdd['patchids']))
+        
+        if 'guids' in paramsToAdd and isinstance(paramsToAdd['guids'],list): # Reformat GUIDs for AV sent as a list to a comma separated string.
+            paramsToAdd['guids'] = ','.join(map(str, paramsToAdd['guids']))
+            
+        if 'details' in paramsToAdd:
+            paramsToAdd['details'] = 'YES' if paramsToAdd['details'] == True else 'NO' # Fix details toggle for MAV
             
         for popMe in popList:
             try: # Skips nonexistent keys
@@ -163,8 +171,12 @@ class NAble:
         formattedData = {}
         
         for item, value in paramsToAdd.items(): # Check params, add anything that isn't blank to the query
+            
             if value !=None:
-                formattedData.update({item : value})
+                if item == 'av': # Fix AV formatting
+                    formattedData.update({'v' : 1 if value.lower() == 'vipre' else 2}) # Fix AV type
+                else:
+                    formattedData.update({item : value})
         return formattedData
         
     # Clients, Sites and Devices
@@ -709,7 +721,7 @@ class NAble:
         describe:bool=False
         ):
         """Lists display name and identifier for all supported antivirus products.
-        
+
         Args:
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
@@ -981,7 +993,7 @@ class NAble:
 
     # Windows Patch Management
     
-    def listPatches(self, #TODO fix list formatting for Policies and Status IDs
+    def listPatches(self, 
         deviceid:int,
         describe:bool=False
         ):
@@ -1033,12 +1045,12 @@ class NAble:
 
         Args:
             deviceid (int): Device ID
-            patchids (str,list): Patch ID(s).  Use a list or comma separated string to send more than 1 at once.
+            patchids (str,list): Patch ID(s).  Use a list or comma separated string to send multiple at once
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
             dict: Nothing of value is returned. May remove this
         """
-
 
         response = self._requester(mode='get',endpoint='patch_approve',rawParams=locals().copy())
         return response if describe != True else response
@@ -1057,6 +1069,7 @@ class NAble:
         Args:
             deviceid (int): Device ID
             patchids (str,list): Patch ID(s).  Use a list or comma separated string to send more than 1 at once.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
             dict: Nothing of value is returned.
@@ -1079,6 +1092,7 @@ class NAble:
         Args:
             deviceid (int): Device ID
             patchids (str,list): Patch ID(s).  Use a list or comma separated string to send more than 1 at once.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
             dict: Nothing of value is returned.
@@ -1103,6 +1117,7 @@ class NAble:
         Args:
             deviceid (int): Device ID
             patchids (str,list): Patch ID(s).  Use a list or comma separated string to send more than 1 at once.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
             str: Additional information (if any) about selected patches.
@@ -1127,6 +1142,7 @@ class NAble:
         Args:
             deviceid (int): Device ID
             patchids (str,list): Patch ID(s).  Use a list or comma separated string to send more than 1 at once.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
             str: Additional information (if any) about selected patches.
@@ -1136,37 +1152,234 @@ class NAble:
         return response['msg'] if describe != True else response
 
     # Managed Antivirus
-    #TODO add all MAV endpoints
+    # https://documentation.n-able.com/remote-management/userguide/Content/managed_antivirus2.htm
     
-    def deviceMavQuarantine(self):
-        pass
-    
-    def deviceMavQuarantineRelease(self):
-        pass
+    def mavQuarantine(self, #TODO test actual response for this
+        deviceid:int,
+        av:str='bitdefender', 
+        describe:bool=False
+        ):
+        """Get quarantined threats for a device.
 
-    def deviceMavQuarantineRemove(self):
-        pass
+        Args:
+            deviceid (int): Device ID.
+            av (str, optional): Specify which AV should be checked [vipre, bitdefender]. Defaults to bitdefender.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+            
+
+        Returns:
+            list,none: List of quarantined items or None if nothing is quarantined
+        """
+        
+
+        response = self._requester(mode='get',endpoint='mav_quarantine_list',rawParams=locals().copy())
+        return response['quarantines'] if describe != True else response
     
-    def mavScanStart(self):
-        pass
     
-    def mavScanPause(self):
-        pass
+    def mavQuarantineRelease(self, #TODO test mavQuarantineRelease
+        deviceid:int,
+        guids:str, # comma separated
+        describe:bool=False
+        ):
+        """Release threat(s) from Managed Antivirus quarantine. 
+
+        Args:
+            deviceid (int): Device ID.
+            guids (str): GUID(s) of quarantined threats. Use a list or comma separated string to send multiple at once.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            str: Status message (if any).  If no message is returned, assume successful.
+        """
+
+        response = self._requester(mode='get',endpoint='mav_quarantine_release',rawParams=locals().copy())
+        return response if describe != True else response
+
+    def mavQuarantineRemove(self, #TODO test mavQuarantineRemove
+        deviceid:int,
+        guids:str, # comma separated
+        describe:bool=False
+        ):
+        """Remove threat(s) from Managed Antivirus quarantine. 
+
+        Args:
+            deviceid (int): Device ID.
+            guids (str): GUID(s) of quarantined threats. Use a list or comma separated string to send multiple at once.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            str: Status message (if any).  If no message is returned, assume successful.
+        """
+
+        response = self._requester(mode='get',endpoint='mav_quarantine_remove',rawParams=locals().copy())
+        return response if describe != True else response
     
-    def mavScanCancel(self):
-        pass
+    def mavScanStart(self,
+        deviceid:int,
+        describe:bool=False        
+        ):
+        """Start quick scan on a device. 
+        
+        Scan will not start immediately.  If a scan is already running, an error will be returned.
+        
+        Args:
+            deviceid (int): Device ID.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            str: Status message (if any).  If no message is returned, assume successful. If a scan is already running, 'An error has occurred' may be returned.
+        """
+        
+        response = self._requester(mode='get',endpoint='mav_scan_start',rawParams=locals().copy())
+        return response['msg'] if describe != True else response
     
-    def mavScanList(self):
-        pass
+    def mavScanPause(self, 
+        deviceid:int,
+        describe:bool=False        
+        ):
+        """Pause scan on a device. 
+        
+        Scan will not be paused immediately.
+        
+        Args:
+            deviceid (int): Device ID.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            str: Status message (if any).  If no message is returned, assume successful. If no scan is running, 'Unsupported action type' may be returned.
+        """
+        
+        response = self._requester(mode='get',endpoint='mav_scan_pause',rawParams=locals().copy())
+        return response['msg'] if describe != True else response
     
-    def mavScans(self):
-        pass
+    def mavScanResume(self,
+        deviceid:int,
+        describe:bool=False        
+        ):
+        """Resume/unpause scan on a device. 
+        
+        Scan will not be resumed immediately.
+        
+        Args:
+            deviceid (int): Device ID.
+            describe (bool, optional): Returns a discription of the service. Defaults to False. If no scan is running, 'Unsupported action type' may be returned.
+
+        Returns:
+            str: Status message (if any).  If no message is returned, assume successful.
+        """
+        
+        response = self._requester(mode='get',endpoint='mav_scan_resume',rawParams=locals().copy())
+        return response['msg'] if describe != True else response
     
-    def mavScanThreats(self):
-        pass
+    def mavScanCancel(self,
+        deviceid:int,
+        describe:bool=False        
+        ):
+        """Cancel scan on a device. 
+        
+        Scan will not be cancelled immediately.
+        
+        Args:
+            deviceid (int): Device ID.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            str: Status message (if any).  If no message is returned, assume successful. If no scan is running, 'An error has occurred' may be returned.
+        """
+        
+        response = self._requester(mode='get',endpoint='mav_scan_cancel',rawParams=locals().copy())
+        return response['msg'] if describe != True else response
     
-    def mavUpdate(self):
-        pass
+    def mavScanList(self,
+        deviceid:int,
+        av:str='bitdefender', 
+        describe:bool=False
+        ):
+        """Get a list of scans for a device. Scans currently running may not be included.
+
+        Args:
+            deviceid (int): Device ID.
+            av (str, optional): Specify which AV should be checked [vipre, bitdefender]. Defaults to bitdefender.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            list: List of scans.
+        """
+        
+        response = self._requester(mode='get',endpoint='mav_scan_device_list',rawParams=locals().copy())
+        return response['scans']['scan'] if describe != True else response
+    
+    def mavScans(self,
+        deviceid:int,
+        details:bool=True,
+        av:str='bitdefender', 
+        describe:bool=False
+        ):
+        """Get a list of scans for a device, should include active scans (but sometimes it doesn't)
+        
+        This will return slightly different information than mavScanList() although I don't know why they aren't the same thing.
+
+        Args:
+            deviceid (int): Device ID.
+            details (bool, optional): Wheter to provide extra details, including threats and errors. Defaults to True (yes).
+            av (str, optional): Specify which AV should be checked [vipre, bitdefender]. Defaults to bitdefender.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            list: List of scans.
+        """
+        
+        
+        response = self._requester(mode='get',endpoint='list_mav_scans',rawParams=locals().copy())
+        return response['scan'] if describe != True else response
+    
+    def mavThreats(self,
+        deviceid:int,
+        av:str='bitdefender', 
+        describe:bool=False
+        ):
+        """Get the most recent occurence of each threat found on a device.
+        
+        These threats may or may not be in quarantine.
+
+        Args:
+            deviceid (int): Device ID.
+            av (str, optional): Specify which AV should be checked [vipre, bitdefender]. Defaults to bitdefender.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            list: List of threats.
+        """
+        
+        response = self._requester(mode='get',endpoint='list_mav_threats',rawParams=locals().copy())
+        return response['threat'] if describe != True else response
+    
+    def mavQuarantineList(self, # TODO seems to return nothing?
+            deviceid:int,
+            items:str=None,
+            av:str='bitdefender', 
+            describe:bool=False
+        ):
+        
+        response = self._requester(mode='get',endpoint='list_mav_quarantine',rawParams=locals().copy())
+        return response if describe != True else response
+    
+    def mavUpdate(self,
+        deviceid:int,
+        describe:bool=False
+        ):
+        """Update the bitdefender definitions on a device (does not work with Vipre)
+
+        Args:
+            deviceid (int): Device ID.
+            describe (bool, optional): Returns a discription of the service. Defaults to False.
+
+        Returns:
+            str: Status message (if any).  If update is already pending 'There is already a MAV definition update pending' will be returned here.  If nothing is returned, assume successful.
+        """
+        
+        response = self._requester(mode='get',endpoint='mav_definitions_update',rawParams=locals().copy())
+        return response['msg'] if describe != True else response
 
     # Backup & Recovery
     def backupSelectionSize(self, #TODO Find someone to test backupSelectionSize
