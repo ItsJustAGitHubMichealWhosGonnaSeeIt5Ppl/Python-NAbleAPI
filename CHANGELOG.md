@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.7] - 2024-12-19
+
+### Added
+
+### Fixed
+
+- Issue with experimental EDR check when software was returned as None
+
+### Changed
+
+### Removed
+
 ## [0.0.6] - 2024-12-17
 
 ### Added
@@ -21,8 +33,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Missing describe param in docstrings for a few endpoints
 
 ### Changed
-
-
 
 ### Removed
 

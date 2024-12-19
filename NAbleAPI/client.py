@@ -21,7 +21,7 @@ import logging
 
 class NAble:
     f"""NAble Data Extraction API Wrapper
-    Version: 0.0.6
+    Version: 0.0.7
         
     Official Documentation: https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm
     
@@ -99,7 +99,7 @@ class NAble:
                 raise Exception(f'Unknown error: {status}')
 
     def __init__(self,region,key,logLevel=None):
-        self.version = '0.0.6' # Remember to update the docstring at the top too!
+        self.version = '0.0.7' # Remember to update the docstring at the top too!
         #TODO Make LogLevel actually do something
         
         dashboardURLS = {
@@ -1459,6 +1459,7 @@ class NAble:
         Note:
         
         - Install date and version may not work on Apple devices.
+        - May not work at all on apple devices
         
         Args:
             deviceid (int): Device ID.
@@ -1473,15 +1474,15 @@ class NAble:
         response = {'installed': False, # Create response object and set information to False/None for consistency
                     'version': None,
                     'installDate':None} 
-        assetSoftware = self.assetDetails(deviceid=deviceid)['software']['item']
-        
-        for software in assetSoftware: # scan through software
-            if software['name'] in edrNames and software['deleted'] == '0': # EDR is on the list and not marked as deleted:
-                response['installed'] = True
-                response['version'] = software['version']
-                response['installDate'] = software['install_date']
-                break
-        
+        assetSoftware = self.assetDetails(deviceid=deviceid)#
+        if assetSoftware['software']:
+            for software in assetSoftware['software']['item']: # scan through software
+                if software['name'] in edrNames and software['deleted'] == '0': # EDR is on the list and not marked as deleted:
+                    response['installed'] = True
+                    response['version'] = software['version']
+                    response['installDate'] = software['install_date']
+                    break
+        #TODO add warning here about missing EDR check
         return response
 
 

@@ -28,7 +28,7 @@ build-backend = "setuptools.build_meta"
 dependencies = {file = ["requirements.txt"]} # MAKE SURE YOU CREATE THIS FILE
 
 [tool.bumpver]
-current_version = "0.0.5" # VERSION
+current_version = "0.0.7" # VERSION
 version_pattern = "MAJOR.MINOR.PATCH"
 commit_message  = "Bump version {old_version} -> {new_version}"
 commit          = true
