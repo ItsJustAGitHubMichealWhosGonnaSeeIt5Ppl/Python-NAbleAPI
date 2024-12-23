@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Response formatter, allowing more consistent responses in data
+- Toggle to init for using new response data
+
+### Fixed
+
+### Changed
+
+- Response line for all methds
+
+### Removed
+
 ## [0.0.7] - 2024-12-19
 
 ### Added
