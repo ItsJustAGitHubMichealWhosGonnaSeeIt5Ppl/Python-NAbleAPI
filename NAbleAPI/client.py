@@ -5,6 +5,7 @@
 import requests
 import xmltodict
 import logging
+from datetime import date,datetime
 
 # # Known issues
 # mobile devices may not work
@@ -16,12 +17,12 @@ import logging
 #TODO add reference ability for things like clientid, etc.
 #TODO Document errors in readthedocs
 #TODO fix bumpver
-#TODO use asset software search to check for SentinalOne!
+#TODO add siteDevices to get all site devices
 
 
 class NAble:
     f"""NAble Data Extraction API Wrapper
-    Version: 0.0.7
+    Version: 0.0.8
         
     Official Documentation: https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm
     
@@ -33,7 +34,7 @@ class NAble:
         key (str): Your NAble API key
     """
     def _requester(self,mode,endpoint,rawParams=None):
-        """Make requests to NAble API and format response. Also handles errors.
+        """Make requests to NAble API and do basic response handling. Also handles errors.
 
         Args:
             mode (str): Request mode [get,post,delete]
@@ -47,7 +48,7 @@ class NAble:
         url = self.queryUrlBase + endpoint # Set URL for requests
         
         if rawParams!= None: # Format params
-            paramsDict = self._formatter(rawParams)
+            paramsDict = self._requestFormatter(rawParams)
         else:
             paramsDict = {}
         
@@ -63,43 +64,40 @@ class NAble:
         elif response.status_code != 200: # Some other bad code
             raise Exception(f'Unknown response code {response.status_code}')
         
+        #TODO figure out describe data and format it here
+        
         else: # Valid URL
             if endpoint == 'get_site_installation_package' and ('describe' in paramsDict and paramsDict['describe'] != True): # Some items are returned as bytes object
                 return response.content 
+            elif 'describe' not in paramsDict or paramsDict['describe'] != True:
+                return self._responseFormatter(response,endpoint=endpoint)
             else:
+            
                 try:
                     content = xmltodict.parse(response.content)['result'] # Response content
                 except KeyError:
                     content = xmltodict.parse(response.content)
                 except Exception as e: # BAD BAD BAD but maybe will help me figure out whats gone wrong here
                     raise e
+                return content
 
-            try: # Check status
-                status = content['@status']
-            except KeyError: # Sometimes no status is sent, in which case assume its OK
-                status = 'OK'
-            
-            if status == 'OK' or endpoint.startswith('mav'): # Valid key/request # Mav likes to return this shit
-                if 'items' in content: # Check for 'items' list in content keys.
-                    return content['items']
-                elif 'describe' in paramsDict and paramsDict['describe']: 
-                    return content['service']
-                else: # Does not have items tag, so return without
-                    return content 
-                    
-            elif status == 'FAIL': 
-                if int(content['error']['errorcode']) == 3: # Login failed, invalid key
-                    raise ValueError(f'Login failed. Your region or API key is wrong.')
-                elif int(content['error']['errorcode']) == 4: 
-                    #Invalid param, EG: bad checkid, bad deviceid.
-                    raise ValueError(f'{content['error']['message']}')
-                else:
-                    raise Exception(content['error']['message'])
-            else:
-                raise Exception(f'Unknown error: {status}')
+    def __init__(self,region:str,key:str,logLevel:str=None,useOriginalValues:bool=True):
+        """Intitialize your N-Sight instance.
 
-    def __init__(self,region,key,logLevel=None):
-        self.version = '0.0.7' # Remember to update the docstring at the top too!
+        Args:
+            region (str): Your tenant region, see wiki for complete list of regions.
+            key (str): API key.
+            logLevel (str, optional): Log Level. Defaults to normal level.
+            useOriginalValues (bool, optional): Use Original values (keys and responses) in items. Names and values of some items in responses are confusing and onconsistent, so I have tried to clean them up and make them easier to use.  The downside to this is that NAbles documentation cannot be used when working with this library.  Anything that has been changed is documented in the ReadTheDocs for that method. Defaults to False (original names and values are kept).
+
+        Raises:
+            ValueError: _description_
+            requests.exceptions.ConnectionError: _description_
+        """
+        
+        self.version = '0.0.8' # Remember to update the docstring at the top too!
+        self.useOgValues = useOriginalValues # Defaults to True
+        self.session = requests.Session() #TODO test reuqets.session
         #TODO Make LogLevel actually do something
         
         dashboardURLS = {
@@ -132,13 +130,13 @@ class NAble:
         self.queryUrlBase = f"https://{regionURL}/api/?apikey={key}&service=" # Key and service for use later
         
         try: # Test URL 
-            testRequest = requests.get(self.queryUrlBase + 'list_clients') 
+            testRequest = self.session.get(self.queryUrlBase + 'list_clients') 
         except requests.exceptions.ConnectionError:
             raise requests.exceptions.ConnectionError('The request URL is not valid, this is an issue with the module. Pleae report your region and correct API url.')
             
         self._requester(endpoint='list_clients',mode='get')  # Test that key is valid.
         
-    def _formatter(self,params):
+    def _requestFormatter(self,params):
         """Formats parameters for request. Removes any parameter with value of None.
 
         Args:
@@ -178,7 +176,181 @@ class NAble:
                 else:
                     formattedData.update({item : value})
         return formattedData
+    
+    def _responseFormatter(self,response:any,endpoint:str=None): # Clean up response data. Only non-describe items should ever be sent here
+        #TODO add docstring!
+        #TODO add single item response handling either in this tool or for the method (when only a single item can ever be returned, a list would not be needed)
+        needsWrapper = ['list_device_asset_details', # Responds with everything in a list, why in gods name?
+                        ]
         
+        # Getting and parsing raw response data from requests
+        if endpoint == 'get_site_installation_package': # Some items are returned as bytes object
+            content = response.content
+        elif isinstance(response,requests.models.Response): # Check if object is a response from requests
+            try:
+                content = xmltodict.parse(response.content)['result'] # Response content
+            except KeyError:
+                content = xmltodict.parse(response.content)
+            except Exception as e: # BAD BAD BAD but maybe will help me figure out whats gone wrong here
+                raise e
+        else:
+            content = response
+
+        try: # Check status
+            status = content['@status']
+        except KeyError: # Sometimes no status is sent, in which case assume its OK
+            status = 'OK'
+        
+        if status == 'OK' or endpoint.startswith('mav'): # Valid key/request # Mav likes to return this shit #TODO fix this
+            if 'items' in content: # Check for 'items' list in content keys.
+                content = content['items']
+        
+        # Errors       
+        elif status == 'FAIL': 
+            if int(content['error']['errorcode']) == 3: # Login failed, invalid key
+                raise ValueError(f'Login failed. Your region or API key is wrong.')
+            elif int(content['error']['errorcode']) == 4: 
+                #Invalid param, EG: bad checkid, bad deviceid.
+                raise ValueError(f'{content['error']['message']}')
+            else:
+                raise Exception(content['error']['message'])
+        else:
+            raise Exception(f'Unknown error: {status}')
+
+        #Wrap non-standard responses
+        if endpoint in needsWrapper: # Fix responses that send everyhing at the "root"
+            popMe = list()
+            for item in content: # Pop unneeded things
+                if item.startswith('@'):
+                    popMe.append(item)
+            for pop in popMe:
+                content.pop(pop)
+                
+            content = {'wrapper': content} # Add the remaining items a dictionart
+            
+        endpointKeys = list()
+        if content == None:
+            return None
+        else:
+            for key, data in content.items(): # Fix data
+                if isinstance(data,list):
+                    endpointKeys.append(key)
+                elif isinstance(data,dict):
+                    content[key] = [content[key]]
+                    endpointKeys.append(key)
+        
+        
+        #Fixing keys with bad, inconsistent, or confusing names. ll items should at the very least have a note about where they appear.  Ideally details about why a change is being made should also be added
+         #TODO should IDs for client, site, device, etc. be returned under the name "ID" for ease of use?
+        betterKeyNames = {'workstationid':'deviceid', # Makes it easier to work with a large list of devices. Appears in workstations()
+                          'serverid': 'deviceid', # Makes it easier to work with a large list of devices. Appears in servers()
+                          }
+        
+        #TODO should these actually be lists instead?
+        # Fixing values where they would be better suited as True/False or actual numbers. All items should at the very least have a note about where they appear.  Ideally details about why a change is being made should also be added.
+        betterValueInfo = {'view_dashboard':bool, # Sent as '0' or '1'. Appears in clients() 
+                           'view_wkstsn_assets':bool, # Sent as '0' or '1'. Appears in clients()
+                           'dashboard_username': 'none', # DOES NOTHING RIGHT NOW. Should be replaced with Actual NoneType if 'none' in returned. Appears in clients()
+                           'server_count':int, # Number but sent as string. Appears in clients()
+                           'workstation_count':int, # Number but sent as string. Appears in clients()
+                           'mobile_device_count':int, # Number but sent as string. Appears in clients()
+                           'device_count': int, # Number but sent as string. Appears in clients()
+                           'connection_ok': bool, # Appears in sites() 
+                           'agent_mode': int, # Number but sent as string. Appears in workstations()
+                           'online': bool, # Appears in workstations()
+                           'active_247':bool, # Appears in workstations()
+                           'creation_date':'date', # Appears in clients(), sites()
+                           'workstationid': int, # Appears in workstations()
+                           'serverid': int, # Appears in servers()
+                           'install_date': 'date', # Appears in workstations(), servers(), assetSoftware()
+                           'last_boot_time': 'timestamp', # Appears in workstations(), servers()
+                           'dsc_active':bool, # Appears in workstations(), servers()
+                           'processor_count':int, # Appears in workstations(), servers()
+                           'assetid':int, # Appears in workstations(), servers()
+                           'clientid':int, # Appears in clients()
+                           'last_scan_time': 'datetime', # Appears in workstations(), servers()
+                           'lastresponse': 'datetime', # Appears in deviceDetails()
+                           'lastboot': 'datetime', # Appears in deviceDetails()
+                           'utc_offset': int, # Appears in workstations(), servers()
+                           'takecontrol': bool, # Appears in clientDevices()
+                           'patch': bool, # Appears in clientDevices()
+                           'mav': bool, # Appears in clientDevices()
+                           'mob': bool, # Appears in clientDevices()
+                           'systray': bool, # Appears in clientDevices()
+                           'mavbreck': bool, # Appears in clientDevices()
+                           'webprotection': bool, # Appears in clientDevices()
+                           'riskintelligence': bool, # Appears in clientDevices()
+                           'id':int, # Appears in clientDevices()
+                           'osinstalldate':'datetime', # Appears in assetDetails()
+                           'scantime':'datetime', # Appears in assetDetails()
+                           'hardwareid': int, # Appears in assetHardware()
+                           'email':bool, # Appears in listChecks()
+                           'sms':bool, # Appears in listChecks()
+                           'emailrecovery':bool, # Appears in listChecks()
+                           'smsrecovery':bool, # Appears in listChecks()
+                           'date':'custom', # Custom datetime for listChecks()
+                           'checkid':int, # Appears in listChecks()
+                           'consecutive_fails': int, # Appears in listChecks()
+                           'utc_run':'datetimeUTC', # Appears in listChecks()
+                           'utc_start':'datetimeUTC', # Appears in listOutages()
+                           'utc_end':'datetimeUTC', # Appears in listOutages()
+                           'outage_id':int, # Appears in listOutages()
+                           'check_id':int, # Appears in driveSpaceHistory()
+                           'templateid':int, # Appears in templates()
+                           'show24x7problems':bool, # Appears in wallchartSettings()
+                           'showdailysafetycheckproblems':bool, # Appears in wallchartSettings()
+                           'showautomatedtaskproblems':bool, # Appears in wallchartSettings()
+                           'includeoverdueservers':bool, # Appears in wallchartSettings()
+                           'includeofflineservers':bool, # Appears in wallchartSettings()
+                           'clear24x7checks':bool, # Appears in generalSettings()
+                           'cleardailysafetychecks':bool, # Appears in generalSettings()
+                           'forcenotes':bool, # Appears in generalSettings()
+                           }
+        
+        if self.useOgValues:
+            pass # Don't change any of the actual dictionary items
+        else: # Fix them
+            for endpKey in endpointKeys:
+                if isinstance(content[endpKey], dict): # fix single object responses (put them in a list)
+                    content[endpKey] = [content[endpKey]]
+                for item in content[endpKey]:
+                    keysToRemove = list()
+                    toAdd = {}
+                    for key, val in item.items(): # Iterate through each individual key/value pair
+                        if key in betterKeyNames.keys(): 
+                            keysToRemove.append(key) # Add to list of keys to be deleted
+                            toAdd[betterKeyNames[key]] = val # Set value to better key name
+                        if key in betterValueInfo.keys() and val !=None: #TODO is there a need for None to be allowed?
+                            if betterValueInfo[key] == bool:
+                                item[key] = bool(int(val)) # This may need some work
+                            elif betterValueInfo[key] == int:
+                                item[key] = int(val)
+                            elif betterValueInfo[key] == 'date':
+                                item[key] = datetime.strptime(val,'%Y-%m-%d').date()
+                            elif betterValueInfo[key] == 'datetime':
+                                item[key] = datetime.strptime(val,'%Y-%m-%d %H:%M:%S')
+                            elif betterValueInfo[key] == 'timestamp':
+                                item[key] = datetime.fromtimestamp(int(val))
+                            elif betterValueInfo[key] == 'custom':
+                                if endpKey == 'check': # check datetime combiner
+                                    try:
+                                        toAdd['last_run'] = datetime.strptime(f'{item['date']} {item['time']}','%Y-%m-%d %H:%M:%S')
+                                    except ValueError: # Never run
+                                        toAdd['last_run'] = None
+                                    keysToRemove.append('date')
+                                    keysToRemove.append('time')
+                            elif betterValueInfo[key] == 'datetimeUTC':
+                                item[key] = datetime.strptime(str(val +' UTC'),'%Y-%m-%d %H:%M:%S %Z')
+                                    
+                    if len(keysToRemove) > 0: # TODO gotta be a better way to do this
+                        item.update(toAdd) # Add new items
+                        for key in keysToRemove:
+                            item.pop(key) # Remove redundant items
+                    
+        return content[endpointKeys[0]] if isinstance(endpointKeys,list) and len(endpointKeys) == 1 else content # Fix data
+    
+    
+
     # Clients, Sites and Devices
     # https://documentation.n-able.com/remote-management/userguide/Content/devices.htm
     # Add Client, Add Site not yet working
@@ -187,7 +359,7 @@ class NAble:
         devicetype:str=None,
         name:str=None,
         describe:bool=False):
-        """Lists all clients.  Optionally, filter by 'devicetype' and/or name.
+        """Get all clients.  Optionally, filter by 'devicetype' and/or name.
         
         Device types
         - workstation
@@ -208,19 +380,19 @@ class NAble:
         response = self._requester(mode='get',endpoint='list_clients',rawParams=locals().copy())
         if describe != True and name != None and response !=True:
             popList = []
-            for inxID, client in enumerate(response['client']):
+            for inxID, client in enumerate(response):
                 if name.lower().strip() not in client['name'].lower().strip():
                     popList.append(inxID)
                     
             popList.reverse() # invert list so highest number is first.
             for pop in popList:
-                response['client'].pop(pop)
-        return response['client'] if describe != True else response
+                response.pop(pop)
+        return response
 
     def sites(self,
         clientid:int,
         describe:bool=False):
-        """Lists all sites for a client.
+        """Get all sites for a client.
 
         Args:
             clientid (int): Client ID.
@@ -231,12 +403,12 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='list_sites',rawParams=locals().copy())
-        return response['site'] if describe != True else response
+        return response
 
     def servers(self,
         siteid:int,
         describe:bool=False):
-        """Lists all servers for site (including top level asset information if available).
+        """Get all servers for site (including top level asset information if available).
 
         Args:
             siteid (:obj:`int`): Site ID.
@@ -247,14 +419,12 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='list_servers',rawParams=locals().copy())
-        if describe !=True and isinstance(response['server'],dict): # Make responses consistent
-            response['server'] = [response['server']] # Fixes issue where a site with a single server would return as a dictionary.
-        return response['server'] if describe != True else response
+        return response
 
     def workstations(self,
         siteid:int,
         describe:bool=None):
-        """List all workstations for site (including top level asset information if available).
+        """Get all workstations for site (including top level asset information if available).
         
         This will NOT provide check information details.
         
@@ -269,14 +439,12 @@ class NAble:
         """
 
         response = self._requester(mode='get',endpoint='list_workstations',rawParams=locals().copy())
-        if describe !=True and isinstance(response['workstation'],dict): # Make responses consistent
-            response['workstation'] = [response['workstation']] # Fixes issue where a site with a single workstation would return as a dictionary. #TODO consider moving this into the requester/response parser
-        return response['workstation'] if describe != True else response
+        return response
         
     def agentlessAssets(self,# Unclear what an output from this would look like
         siteid:int,
         describe:bool=False):
-        """Lists all agentless and mini-agent asset devices for site (including top level asset information)
+        """Get all agentless and mini-agent asset devices for site (including top level asset information)
 
         Args:
             siteid (:obj:`int`): Site ID.
@@ -287,7 +455,7 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='list_agentless_assets',rawParams=locals().copy())
-        return response if describe != True else response
+        return response
     
     def clientDevices(self,
         clientid:int,
@@ -295,8 +463,8 @@ class NAble:
         describe:bool=False,
         includeDetails:bool=False,
         experimentalChecks:bool=False
-        ):
-        """Lists all devices of type 'server/workstation' for a client.
+        ): # TODO allow filtering by site ID
+        """Get all devices of type 'server/workstation' for a client.  Optionally, get their details.
 
         Args:
             clientid (:obj:`int`): Client ID.
@@ -312,47 +480,39 @@ class NAble:
     
         response = self._requester(mode='get',endpoint='list_devices_at_client',rawParams=locals().copy())
         if describe != True:
-        
-        
             if response == None:
                 raise ValueError(f'{clientid} has no {devicetype} devices')
             else:
-                clientDevices = response['client']
-            
-            if includeDetails == True: # Return devices with details
-                if isinstance(clientDevices['site'], dict): 
-                    clientDevices['site'] = [clientDevices['site']]
-                for site in clientDevices['site']:
-                    if isinstance(site,dict):
-                        site = [site]
-                    for siteDevices in site:
-                        if isinstance(siteDevices[devicetype],dict):
-                            siteDevices[devicetype] = [siteDevices[devicetype]]
-                        
-                        deviceList = []
-                        for device in siteDevices[devicetype]:
-                            #Items which are not returneed in device details, but are in the overview (Why is there a difference?)
-                            devStatus = device['status']
-                            checkCount = device['checkcount']
-                            webProtect = device['webprotection']
-                            riskInt = device['riskintelligence']
-                            device = self.deviceDetails(deviceid=device['id'],experimentalChecks=experimentalChecks)
-                            # Re-add mising items
-                            device['status'] = devStatus
-                            device['checkcount'] = checkCount
-                            device['webprotection'] = webProtect
-                            device['riskintelligence'] = riskInt
-                            deviceList+= [device]
-                        siteDevices[devicetype] = deviceList
+                clientDevices = response[0]
+            if isinstance(clientDevices['site'],dict):
+                clientDevices['site'] = [clientDevices['site']]
+            for site in clientDevices['site']:
+                site = self._responseFormatter(site)
+                if includeDetails == True:
+                    deviceList = list()
+                    for device in site:
+                        #Items which are not returneed in device details, but are in the overview (Why is there a difference?)
+                        devStatus = device['status']
+                        checkCount = device['checkcount']
+                        webProtect = device['webprotection']
+                        riskInt = device['riskintelligence']
+                        device = self.deviceDetails(deviceid=device['id'],experimentalChecks=experimentalChecks)
+                        # Re-add mising items
+                        device['status'] = devStatus
+                        device['checkcount'] = checkCount
+                        device['webprotection'] = webProtect
+                        device['riskintelligence'] = riskInt
+                        deviceList+= [device]
+                    site = deviceList
             return clientDevices
         else:
-            return response 
+            return response #TODO simplify this
     
     def deviceDetails(self,
         deviceid:int,
         experimentalChecks:bool=False,
         describe:bool=False):
-        """Lists all monitoring information for the device (server or workstation)
+        """Get all monitoring information for the device (server or workstation).  This information can also be gotten using the clientDevices() method.
 
         Args:
             deviceid (:obj:`int`): Device ID.
@@ -362,17 +522,17 @@ class NAble:
         Returns:
             dict: Full device details
         """
-        response = self._requester(mode='get',endpoint='list_device_monitoring_details',rawParams=locals().copy())
+        response = self._requester(mode='get',endpoint='list_device_monitoring_details',rawParams=locals().copy())[0]
 
-        devType = 'workstation' if 'workstation' in response.keys() else 'server' # Allows device object to be returned as a dictionary
-        
-        if int(response[devType]['checks']['@count']) > 0 and isinstance(response[devType]['checks']['check'], dict): # Convert single check from dict to list for consistency
-            response[devType]['checks']['check'] = [response[devType]['checks']['check']]
+        #TODO will this handle describe?
+        if int(response['checks']['@count']) > 0 and isinstance(response['checks']['check'], dict): # Convert single check from dict to list for consistency
+            response['checks']['check'] = [response['checks']['check']]
             
         if experimentalChecks: # Run experimental Checks
-            response[devType]['edr'] = str(int(self.edrPresent(deviceid)['installed'])) # Make value consistent with everything else, I know its dumb but whatever
+            edrCheck = int(self.edrPresent(deviceid)['installed'])
+            response['edr'] = str(edrCheck) if self.useOgValues else bool(edrCheck) # Make value consistent with everything else, I know its dumb but whatever
             
-        return response[devType] if describe != True else response
+        return response
     
     def addClient(self, 
         name:str,
@@ -404,7 +564,7 @@ class NAble:
         
         #TODO add error handling
         response = self._requester(mode='get',endpoint='add_client',rawParams=locals().copy())
-        return response if describe != True else response
+        return response
     
     
     def addSite(self, 
@@ -431,7 +591,7 @@ class NAble:
         """
         #TODO add better error handling
         response = self._requester(mode='get',endpoint='add_site',rawParams=locals().copy())
-        return response if describe != True else response
+        return response
     
     def siteInstallPackage(self,
         endcustomerid:int,
@@ -492,7 +652,7 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='list_checks',rawParams=locals().copy())
-        return response['check'] if describe != True else response
+        return response
     
     def failingChecks(self,
         clientid:int=None,
@@ -512,7 +672,7 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='list_failing_checks',rawParams=locals().copy())
-        return response if describe != True else response
+        return response
 
     def checkConfig(self,
         checkid:int,
@@ -529,7 +689,7 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='list_check_config',rawParams=locals().copy())
-        return response['check_config'] if describe != True else response
+        return response
     
     def formattedCheckOutput(self,
         checkid:int,
@@ -546,7 +706,7 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='get_formatted_check_output',rawParams=locals().copy())
-        return response if describe != True else response
+        return response
     
     def outages(self,
         deviceid:int,
@@ -564,7 +724,7 @@ class NAble:
         
         
         response = self._requester(mode='get',endpoint='list_outages',rawParams=locals().copy())
-        return response if describe != True else response
+        return response
     
     def performanceHistory(self, #TODO test performance history
         deviceid:int,
@@ -589,7 +749,7 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='list_performance_history',rawParams=locals().copy())
-        return response if describe != True else response
+        return response
 
     def driveSpaceHistory(self,
         deviceid:int,
@@ -614,7 +774,7 @@ class NAble:
         
         #TODO add a date standartisation system to replace theirs
         response = self._requester(mode='get',endpoint='list_drive_space_history',rawParams=locals().copy())
-        return response['drive'] if describe != True else response
+        return response
     
     def exchangeStorageHistory(self, #TODO Find someone to test Exchange Space history
         deviceid:int,
@@ -637,7 +797,7 @@ class NAble:
             _type_: _description_
         """
         response = self._requester(mode='get',endpoint='list_exchange_storage_history',rawParams=locals().copy())
-        return response if describe != True else response
+        return response
     
     def clearCheck(self, #TODO test clearing check
         checkid:int,
@@ -673,7 +833,7 @@ class NAble:
             _type_: _description_
         """
         response = self._requester(mode='get',endpoint='clear_check',rawParams=locals().copy())
-        return response if describe != True else response
+        return response
     
     def addNote(self,
         checkid:int,
@@ -695,7 +855,7 @@ class NAble:
         # TODO possibly make this return True/False depending on whether note is added or not
         #TODO why does this work with get?
         response = self._requester(mode='get',endpoint='add_check_note',rawParams=locals().copy())
-        return response if describe != True else response
+        return response
 
     def templates(self, 
         devicetype:str=None,
@@ -713,7 +873,7 @@ class NAble:
             list: List of templates with template IDs. No details are provided.
         """
         response = self._requester(mode='get',endpoint='list_templates',rawParams=locals().copy())
-        return response['installation_template'] if describe != True else response
+        return response
 
     # Antivirus Update Check Information
     
@@ -729,7 +889,7 @@ class NAble:
             list: List of supported AVs with ID"""
 
         response = self._requester(mode='get',endpoint='list_supported_av_products',rawParams=locals().copy())
-        return response['products']['product'] if describe != True else response
+        return response
 
     def AVDefinitions(self,
         product:str, #TODO maybe allow search here and use supported AVs endpoint
@@ -747,7 +907,7 @@ class NAble:
         """
 
         response = self._requester(mode='get',endpoint='list_av_definitions',rawParams=locals().copy())
-        return response['definitions']['definition'] if describe != True else response
+        return response
     
     def AVDefinitionsReleaseDate(self, # TODO what is the point of this if the date is already provided in the versions endpoint
             product:str, # TODO allow searching here?
@@ -768,7 +928,7 @@ class NAble:
 
 
         response = self._requester(mode='get',endpoint='get_av_definition_release_date',rawParams=locals().copy())
-        return response['definition'] if describe != True else response
+        return response
     
     def AVHistory(self, # TODO maybe allow date filtering here? #TODO why did it return 90?
         deviceid:int, # Claims string in documentation, but all others are int?
@@ -786,7 +946,7 @@ class NAble:
 
         
         response = self._requester(mode='get',endpoint='list_av_history',rawParams=locals().copy())
-        return response['days']['day'] if describe != True else response
+        return response
     
     # Backup Check History
     
@@ -808,7 +968,7 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='list_backup_history',rawParams=locals().copy())
-        return response['days']['day'] if describe != True else response
+        return response
     
     # Asset Tracking Information
     # https://documentation.n-able.com/remote-management/userguide/Content/asset_tracking_information.htm
@@ -851,7 +1011,7 @@ class NAble:
         """
 
         response = self._requester(mode='get',endpoint='list_all_hardware',rawParams=locals().copy())
-        return response['hardware'] if describe != True else response
+        return response
 
     def assetSoftware(self,
         assetid:int,
@@ -872,7 +1032,7 @@ class NAble:
         """
 
         response = self._requester(mode='get',endpoint='list_all_software',rawParams=locals().copy())
-        return response['software'] if describe != True else response
+        return response[0]
     
     def licenseGroups(self,
         describe:bool=False
@@ -887,7 +1047,7 @@ class NAble:
         """
 
         response = self._requester(mode='get',endpoint='list_license_groups',rawParams=locals().copy())
-        return response['license_group'] if describe != True else response
+        return response
 
     def licenseGroupItems(self,
         license_group_id:int,
@@ -904,7 +1064,7 @@ class NAble:
         """
         # TODO dig into this more, what is the point?
         response = self._requester(mode='get',endpoint='list_license_group_items',rawParams=locals().copy())
-        return response['license_group_item'] if describe != True else response
+        return response
     
     def clientLicenseCount(self,
         clientid:int,
@@ -921,7 +1081,7 @@ class NAble:
         """
 
         response = self._requester(mode='get',endpoint='list_client_license_count',rawParams=locals().copy())
-        return response['license_count'] if describe != True else response
+        return response
     
     def assetLicensedSoftware(self, # TODO test assetLicensedSoftware (find an asset that is using this correctly)
         assetid:int,
@@ -938,7 +1098,7 @@ class NAble:
         """
 
         response = self._requester(mode='get',endpoint='list_licensed_software',rawParams=locals().copy())
-        return response if describe != True else response
+        return response
         
     def assetDetails(self, 
         deviceid:int,
@@ -957,7 +1117,7 @@ class NAble:
         """
         #TODO cleanup response as it contains @host, @status, and @created for some reason. Fucking why
         response = self._requester(mode='get',endpoint='list_device_asset_details',rawParams=locals().copy())
-        return response if describe != True else response
+        return response[0]
     
     # Settings
     
@@ -973,8 +1133,11 @@ class NAble:
             dict: Wallchart settings.
         """
     
-        response = self._requester(mode='get',endpoint='list_wallchart_settings',rawParams=locals().copy())
-        return response['wallchart'] if describe != True else response
+        response = self._requester(mode='get',endpoint='list_wallchart_settings',rawParams=locals().copy())[0]
+        response = self._responseFormatter(response['wallchart'])
+        response['servers'] = response['servers'][0]
+        response['workstations'] = response['workstations'][0]
+        return response
 
     def generalSettings(self,
         describe:bool=False
@@ -989,7 +1152,8 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='list_general_settings',rawParams=locals().copy())
-        return response['settings']['items']['general'] if describe != True else response
+        response = self._responseFormatter(response[0]['items'])[0]
+        return response
 
     # Windows Patch Management
     
@@ -1029,7 +1193,7 @@ class NAble:
         """
 
         response = self._requester(mode='get',endpoint='patch_list_all',rawParams=locals().copy())
-        return response['patches']['patch'] if describe != True else response
+        return response
     
     #TODO figure out what should be returned for patch management calls since by default nothing is sent back. Maybe return the patch information from listPatches for the ones that were modified?
     def approvePatches(self,
@@ -1053,7 +1217,7 @@ class NAble:
         """
 
         response = self._requester(mode='get',endpoint='patch_approve',rawParams=locals().copy())
-        return response if describe != True else response
+        return response
 
     def doNothingPatches(self,
         deviceid:int,
@@ -1076,7 +1240,7 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='patch_do_nothing',rawParams=locals().copy())
-        return response['msg'] if describe != True else response
+        return response
 
     def ignorePatches(self,
         deviceid:int,
@@ -1099,7 +1263,7 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='patch_ignore',rawParams=locals().copy())
-        return response['msg'] if describe != True else response
+        return response
 
     def reprocessPatches(self,
         deviceid:int,
@@ -1124,7 +1288,7 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='patch_reprocess',rawParams=locals().copy())
-        return response['msg'] if describe != True else response
+        return response
 
     def retryPatches(self, # TODO confirm if this is any different than reprocess
         deviceid:int,
@@ -1149,7 +1313,7 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='patch_retry',rawParams=locals().copy())
-        return response['msg'] if describe != True else response
+        return response
 
     # Managed Antivirus
     # https://documentation.n-able.com/remote-management/userguide/Content/managed_antivirus2.htm
@@ -1173,7 +1337,7 @@ class NAble:
         
 
         response = self._requester(mode='get',endpoint='mav_quarantine_list',rawParams=locals().copy())
-        return response['quarantines'] if describe != True else response
+        return response
     
     
     def mavQuarantineRelease(self, #TODO test mavQuarantineRelease
@@ -1193,7 +1357,7 @@ class NAble:
         """
 
         response = self._requester(mode='get',endpoint='mav_quarantine_release',rawParams=locals().copy())
-        return response if describe != True else response
+        return response
 
     def mavQuarantineRemove(self, #TODO test mavQuarantineRemove
         deviceid:int,
@@ -1212,7 +1376,7 @@ class NAble:
         """
 
         response = self._requester(mode='get',endpoint='mav_quarantine_remove',rawParams=locals().copy())
-        return response if describe != True else response
+        return response
     
     def mavScanStart(self,
         deviceid:int,
@@ -1231,7 +1395,7 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='mav_scan_start',rawParams=locals().copy())
-        return response['msg'] if describe != True else response
+        return response
     
     def mavScanPause(self, 
         deviceid:int,
@@ -1250,7 +1414,7 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='mav_scan_pause',rawParams=locals().copy())
-        return response['msg'] if describe != True else response
+        return response
     
     def mavScanResume(self,
         deviceid:int,
@@ -1269,7 +1433,7 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='mav_scan_resume',rawParams=locals().copy())
-        return response['msg'] if describe != True else response
+        return response
     
     def mavScanCancel(self,
         deviceid:int,
@@ -1288,7 +1452,7 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='mav_scan_cancel',rawParams=locals().copy())
-        return response['msg'] if describe != True else response
+        return response
     
     def mavScanList(self,
         deviceid:int,
@@ -1307,7 +1471,7 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='mav_scan_device_list',rawParams=locals().copy())
-        return response['scans']['scan'] if describe != True else response
+        return response
     
     def mavScans(self,
         deviceid:int,
@@ -1331,7 +1495,7 @@ class NAble:
         
         
         response = self._requester(mode='get',endpoint='list_mav_scans',rawParams=locals().copy())
-        return response['scan'] if describe != True else response
+        return response
     
     def mavThreats(self,
         deviceid:int,
@@ -1352,7 +1516,7 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='list_mav_threats',rawParams=locals().copy())
-        return response['threat'] if describe != True else response
+        return response
     
     def mavQuarantineList(self, # TODO seems to return nothing?
             deviceid:int,
@@ -1362,7 +1526,7 @@ class NAble:
         ):
         
         response = self._requester(mode='get',endpoint='list_mav_quarantine',rawParams=locals().copy())
-        return response if describe != True else response
+        return response
     
     def mavUpdate(self,
         deviceid:int,
@@ -1379,7 +1543,7 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='mav_definitions_update',rawParams=locals().copy())
-        return response['msg'] if describe != True else response
+        return response
 
     # Backup & Recovery
     def backupSelectionSize(self, #TODO Find someone to test backupSelectionSize
@@ -1406,7 +1570,7 @@ class NAble:
         """
 
         response = self._requester(mode='get',endpoint='mob/mob_list_selection_size',rawParams=locals().copy())
-        return response if describe != True else response
+        return response
     
     def backupSessions(self, #TODO Find someone to test backupSessions
         deviceid:int,
@@ -1427,7 +1591,7 @@ class NAble:
         """
 
         response = self._requester(mode='get',endpoint='list_mob_sessions',rawParams=locals().copy())
-        return response if describe != True else response
+        return response
     
     # Run task now
     
@@ -1437,7 +1601,7 @@ class NAble:
         ):
 
         response = self._requester(mode='get',endpoint='task_run_now',rawParams=locals().copy())
-        return response if describe != True else response
+        return response
     
     # List Active Directory Users
     
@@ -1447,7 +1611,7 @@ class NAble:
         ):
 
         response = self._requester(mode='get',endpoint='task_run_now',rawParams=locals().copy())
-        return response if describe != True else response
+        return response
 
     # CUSTOM METHODS
     
