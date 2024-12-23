@@ -5,14 +5,14 @@ from time import sleep
 import csv
 from datetime import date
 import logging
-from time import sleep
 import json
+from toolkit import clearConsole
 
 #TODO add a visual interface or enhanced commandline with curses.
 #TODO add more logs
 
 toolVer = '0.0.3'
-compatibleWith = '0.0.2' # TODO make this actually do something Compatible version of package
+compatibleWith = '0.0.3' # TODO make this actually do something Compatible version of package
 
 def logfig(): # Configure logger
     print('Logging level set to normal. To change, type DEBUG, otherwise press enter/return')
@@ -29,8 +29,7 @@ def printList(header,listToPrint):
     for item in listToPrint:
         print(item)
 
-def clearConsole(): # Clears the console
-  print('\n' * 100)
+
   
 def inputValidation(text,validOptions=['yes','y','no','n'],returnBool=True,timeout=10): # Input validator
     """Basic input validation
