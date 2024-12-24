@@ -1,8 +1,10 @@
-# NAble Data Extraction API wrapper/Library
+# NSight Data Extraction API wrapper/Library
 
-This is a Python wrapper/library for the NAble Data Extraction API.  The NAble API returns data in xml format, this tool will convert those to lists and dictionaries for ease of use.
+WARNING/NOTE: I wrote all of this based on the N-Able documentation, which says N-Able all over it, but I am now realising this is technically just for N-Sight, not N-Able.  I am in the process of renaming and fixing all of the issues this causes.
 
-The official API documentation from NAble can be found [here](https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm). I have tried to keep my naming scheme similar to theirs.
+This is a Python wrapper/library for the NSight Data Extraction API.  The NSight API returns data in xml format, this tool will convert those to lists and dictionaries for ease of use.
+
+The official API documentation from NSight can be found [here](https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm). I have tried to keep my naming scheme similar to theirs.
 
 NOTE:  
 - This is still in extremely early stages of development, function names may change! 
