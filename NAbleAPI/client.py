@@ -97,7 +97,7 @@ class NAble:
         
         self.version = '0.0.8' # Remember to update the docstring at the top too!
         self.useOgValues = useOriginalValues # Defaults to True
-        self.session = requests.Session() #TODO test reuqets.session
+        self.session = requests.Session()
         #TODO Make LogLevel actually do something
         
         dashboardURLS = {
@@ -486,10 +486,12 @@ class NAble:
                 clientDevices = response[0]
             if isinstance(clientDevices['site'],dict):
                 clientDevices['site'] = [clientDevices['site']]
-            for site in clientDevices['site']:
-                site = self._responseFormatter(site)
+            for siteNum, site in enumerate(clientDevices['site']):
                 if includeDetails == True:
-                    deviceList = list()
+                    newSiteObj = {'id':site['id'],
+                               'name':site['name'],
+                               'devices':[]}
+                    site = self._responseFormatter(site) # Reformat all devices
                     for device in site:
                         #Items which are not returneed in device details, but are in the overview (Why is there a difference?)
                         devStatus = device['status']
@@ -502,8 +504,8 @@ class NAble:
                         device['checkcount'] = checkCount
                         device['webprotection'] = webProtect
                         device['riskintelligence'] = riskInt
-                        deviceList+= [device]
-                    site = deviceList
+                        newSiteObj['devices'] += [device]
+                    clientDevices['site'][siteNum] = newSiteObj
             return clientDevices
         else:
             return response #TODO simplify this
@@ -1618,7 +1620,7 @@ class NAble:
     def edrPresent(self,
         deviceid:int
         ):
-        """Check if EDR is present on a device.
+        """Check if EDR is present on a device. by looking first at software, then at device checks.
         
         Note:
         
@@ -1631,7 +1633,9 @@ class NAble:
         Returns:
             dict: Whether EDR is installed, if EDR is installed a version and install date will also be provided
         """
-        
+        edrChecks = ['Integration Check - EDR - Agent Health Status', # macOS EDR check names
+                     'Integration Check - EDR - Threat Status' # macOS EDR check names
+                     ]
         edrNames = ['Sentinel Agent','SentinelOne Extensions'] 
         edrCatIDs = ['2244686'] # 2244686 = Mac ID
         
@@ -1645,7 +1649,18 @@ class NAble:
                     response['installed'] = True
                     response['version'] = software['version']
                     response['installDate'] = software['install_date']
+                    edrInst = True
                     break
+        if response['installed']: # EDR has already been found, don't need to keep looking
+            pass
+        else:
+            assetChecks = self.checks(deviceid)
+            for check in assetChecks:
+                if check['description'] in edrChecks: 
+                    response['installed'] = True
+                    break
+                
+            
         #TODO add warning here about missing EDR check
         return response
 

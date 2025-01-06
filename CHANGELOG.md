@@ -7,16 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.8] 2025-01-06
+ 
 ### Added
 
 - Response formatter, allowing more consistent responses in data
 - Toggle to init for using new response data
+- Session for requests
 
 ### Fixed
 
+- EDRPresent not detecting devices with EDR checks.
+
 ### Changed
 
-- Response line for all methds
+- Response line for all methods
+- Reponse for clientDevice when include details is enabled
 
 ### Removed
 
