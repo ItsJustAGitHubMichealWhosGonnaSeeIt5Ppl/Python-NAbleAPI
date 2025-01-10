@@ -22,7 +22,7 @@ from datetime import date,datetime
 
 class NAble:
     f"""NAble Data Extraction API Wrapper
-    Version: 0.0.8
+    Version: 0.0.9
         
     Official Documentation: https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm
     
@@ -95,7 +95,7 @@ class NAble:
             requests.exceptions.ConnectionError: _description_
         """
         
-        self.version = '0.0.8' # Remember to update the docstring at the top too!
+        self.version = '0.0.9' # Remember to update the docstring at the top too!
         self.useOgValues = useOriginalValues # Defaults to True
         self.session = requests.Session()
         #TODO Make LogLevel actually do something
@@ -1622,6 +1622,8 @@ class NAble:
         ):
         """Check if EDR is present on a device. by looking first at software, then at device checks.
         
+        WARNING: This is experimental and may not always find EDR (or lack of EDR) Use at your own risk
+        
         Note:
         
         - Install date and version may not work on Apple devices.
@@ -1655,13 +1657,12 @@ class NAble:
             pass
         else:
             assetChecks = self.checks(deviceid)
-            for check in assetChecks:
-                if check['description'] in edrChecks: 
-                    response['installed'] = True
-                    break
+            if assetChecks: # AssetChecks responds none if no checks.
+                for check in assetChecks:
+                    if check['description'] in edrChecks: 
+                        response['installed'] = True
+                        break
                 
-            
-        #TODO add warning here about missing EDR check
         return response
 
 

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.9] - 2025-01-10
+
+### Added
+
+### Fixed
+
+- Experimental EDR check causing error if no checks are present on device.
+
+### Changed
+
+### Removed
+
 ## [0.0.8] 2025-01-06
  
 ### Added
