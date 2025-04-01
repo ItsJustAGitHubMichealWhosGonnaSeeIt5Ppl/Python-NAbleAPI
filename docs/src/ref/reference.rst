@@ -10,7 +10,7 @@ Reference
 :mod:`NAble` Module
 =======================
 
-.. automodule:: NAbleAPI.NAble
+.. automodule:: NAbleAPI.client
     :members:
     :undoc-members:
     :special-members: __init__
