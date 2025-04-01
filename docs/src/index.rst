@@ -104,4 +104,5 @@ It's probably best not to store your API key in your script. Instead, you can cr
 
    ref/clientSiteDevices.rst
    ref/patches.rst
+   ref/reference
 
