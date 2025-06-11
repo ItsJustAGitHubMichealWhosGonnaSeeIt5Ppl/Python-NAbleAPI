@@ -5,7 +5,10 @@
 import requests
 import xmltodict
 import logging
-from datetime import date,datetime
+from datetime import date, datetime
+from typing import Optional
+from pydantic import TypeAdapter
+from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstations, Workstation
 
 # # Known issues
 # mobile devices may not work
@@ -19,10 +22,11 @@ from datetime import date,datetime
 #TODO fix bumpver
 #TODO add siteDevices to get all site devices
 
+version = '0.0.10' # Remember to update the docstring at the top too!
 
 class NAble:
-    f"""NAble Data Extraction API Wrapper
-    Version: 0.0.9
+    """NAble Data Extraction API Wrapper
+    Version: {version}
         
     Official Documentation: https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm
     
@@ -32,7 +36,7 @@ class NAble:
     Args:
         region (str): Your dashboard region (not all URLs have been verified)
         key (str): Your NAble API key
-    """
+    """.format(version=version)
     def _requester(self,mode,endpoint,rawParams=None):
         """Make requests to NAble API and do basic response handling. Also handles errors.
 
@@ -81,21 +85,20 @@ class NAble:
                     raise e
                 return content
 
-    def __init__(self,region:str,key:str,logLevel:str=None,useOriginalValues:bool=True):
+    def __init__(self, region:str, key:str, logLevel:Optional[str]=None, useOriginalValues:bool=True):
         """Intitialize your N-Sight instance.
 
         Args:
             region (str): Your tenant region, see wiki for complete list of regions.
             key (str): API key.
-            logLevel (str, optional): Log Level. Defaults to normal level.
-            useOriginalValues (bool, optional): Use Original values (keys and responses) in items. Names and values of some items in responses are confusing and onconsistent, so I have tried to clean them up and make them easier to use.  The downside to this is that NAbles documentation cannot be used when working with this library.  Anything that has been changed is documented in the ReadTheDocs for that method. Defaults to False (original names and values are kept).
+            logLevel (str, optional): Log Level. Defaults to normal level. (not implemented).
+            useOriginalValues (bool, optional): Use Original values (keys and responses) in items. Names and values of some items in responses are confusing and onconsistent, so I have tried to clean them up and make them easier to use.  The downside to this is that NAbles documentation cannot be used when working with this library.  Anything that has been changed is documented in the ReadTheDocs for that method. Defaults to True (original names and values are kept).
 
         Raises:
             ValueError: _description_
             requests.exceptions.ConnectionError: _description_
         """
         
-        self.version = '0.0.9' # Remember to update the docstring at the top too!
         self.useOgValues = useOriginalValues # Defaults to True
         self.session = requests.Session()
         #TODO Make LogLevel actually do something
@@ -131,8 +134,8 @@ class NAble:
         
         try: # Test URL 
             testRequest = self.session.get(self.queryUrlBase + 'list_clients') 
-        except requests.exceptions.ConnectionError:
-            raise requests.exceptions.ConnectionError('The request URL is not valid, this is an issue with the module. Pleae report your region and correct API url.')
+        except requests.exceptions.ConnectionError as e:
+            raise requests.exceptions.ConnectionError('The request URL is not valid, this is an issue with the module. Pleae report your region and correct API url.') #TODO can also appear if no connection
             
         self._requester(endpoint='list_clients',mode='get')  # Test that key is valid.
         
@@ -177,7 +180,7 @@ class NAble:
                     formattedData.update({item : value})
         return formattedData
     
-    def _responseFormatter(self,response:any,endpoint:str=None): # Clean up response data. Only non-describe items should ever be sent here
+    def _responseFormatter(self,response:any, endpoint:str=None): # Clean up response data. Only non-describe items should ever be sent here
         #TODO add docstring!
         #TODO add single item response handling either in this tool or for the method (when only a single item can ever be returned, a list would not be needed)
         needsWrapper = ['list_device_asset_details', # Responds with everything in a list, why in gods name?
@@ -241,113 +244,23 @@ class NAble:
         
         
         #Fixing keys with bad, inconsistent, or confusing names. ll items should at the very least have a note about where they appear.  Ideally details about why a change is being made should also be added
-         #TODO should IDs for client, site, device, etc. be returned under the name "ID" for ease of use?
-        betterKeyNames = {'workstationid':'deviceid', # Makes it easier to work with a large list of devices. Appears in workstations()
-                          'serverid': 'deviceid', # Makes it easier to work with a large list of devices. Appears in servers()
-                          }
+        #TODO should IDs for client, site, device, etc. be returned under the name "ID" for ease of use?
         
         #TODO should these actually be lists instead?
-        # Fixing values where they would be better suited as True/False or actual numbers. All items should at the very least have a note about where they appear.  Ideally details about why a change is being made should also be added.
-        betterValueInfo = {'view_dashboard':bool, # Sent as '0' or '1'. Appears in clients() 
-                           'view_wkstsn_assets':bool, # Sent as '0' or '1'. Appears in clients()
-                           'dashboard_username': 'none', # DOES NOTHING RIGHT NOW. Should be replaced with Actual NoneType if 'none' in returned. Appears in clients()
-                           'server_count':int, # Number but sent as string. Appears in clients()
-                           'workstation_count':int, # Number but sent as string. Appears in clients()
-                           'mobile_device_count':int, # Number but sent as string. Appears in clients()
-                           'device_count': int, # Number but sent as string. Appears in clients()
-                           'connection_ok': bool, # Appears in sites() 
-                           'agent_mode': int, # Number but sent as string. Appears in workstations()
-                           'online': bool, # Appears in workstations()
-                           'active_247':bool, # Appears in workstations()
-                           'creation_date':'date', # Appears in clients(), sites()
-                           'workstationid': int, # Appears in workstations()
-                           'serverid': int, # Appears in servers()
-                           'install_date': 'date', # Appears in workstations(), servers(), assetSoftware()
-                           'last_boot_time': 'timestamp', # Appears in workstations(), servers()
-                           'dsc_active':bool, # Appears in workstations(), servers()
-                           'processor_count':int, # Appears in workstations(), servers()
-                           'assetid':int, # Appears in workstations(), servers()
-                           'clientid':int, # Appears in clients()
-                           'last_scan_time': 'datetime', # Appears in workstations(), servers()
-                           'lastresponse': 'datetime', # Appears in deviceDetails()
-                           'lastboot': 'datetime', # Appears in deviceDetails()
-                           'utc_offset': int, # Appears in workstations(), servers()
-                           'takecontrol': bool, # Appears in clientDevices()
-                           'patch': bool, # Appears in clientDevices()
-                           'mav': bool, # Appears in clientDevices()
-                           'mob': bool, # Appears in clientDevices()
-                           'systray': bool, # Appears in clientDevices()
-                           'mavbreck': bool, # Appears in clientDevices()
-                           'webprotection': bool, # Appears in clientDevices()
-                           'riskintelligence': bool, # Appears in clientDevices()
-                           'id':int, # Appears in clientDevices()
-                           'osinstalldate':'datetime', # Appears in assetDetails()
-                           'scantime':'datetime', # Appears in assetDetails()
-                           'hardwareid': int, # Appears in assetHardware()
-                           'email':bool, # Appears in listChecks()
-                           'sms':bool, # Appears in listChecks()
-                           'emailrecovery':bool, # Appears in listChecks()
-                           'smsrecovery':bool, # Appears in listChecks()
-                           'date':'custom', # Custom datetime for listChecks()
-                           'checkid':int, # Appears in listChecks()
-                           'consecutive_fails': int, # Appears in listChecks()
-                           'utc_run':'datetimeUTC', # Appears in listChecks()
-                           'utc_start':'datetimeUTC', # Appears in listOutages()
-                           'utc_end':'datetimeUTC', # Appears in listOutages()
-                           'outage_id':int, # Appears in listOutages()
-                           'check_id':int, # Appears in driveSpaceHistory()
-                           'templateid':int, # Appears in templates()
-                           'show24x7problems':bool, # Appears in wallchartSettings()
-                           'showdailysafetycheckproblems':bool, # Appears in wallchartSettings()
-                           'showautomatedtaskproblems':bool, # Appears in wallchartSettings()
-                           'includeoverdueservers':bool, # Appears in wallchartSettings()
-                           'includeofflineservers':bool, # Appears in wallchartSettings()
-                           'clear24x7checks':bool, # Appears in generalSettings()
-                           'cleardailysafetychecks':bool, # Appears in generalSettings()
-                           'forcenotes':bool, # Appears in generalSettings()
-                           }
         
         if self.useOgValues:
             pass # Don't change any of the actual dictionary items
         else: # Fix them
-            for endpKey in endpointKeys:
-                if isinstance(content[endpKey], dict): # fix single object responses (put them in a list)
-                    content[endpKey] = [content[endpKey]]
-                for item in content[endpKey]:
-                    keysToRemove = list()
-                    toAdd = {}
-                    for key, val in item.items(): # Iterate through each individual key/value pair
-                        if key in betterKeyNames.keys(): 
-                            keysToRemove.append(key) # Add to list of keys to be deleted
-                            toAdd[betterKeyNames[key]] = val # Set value to better key name
-                        if key in betterValueInfo.keys() and val !=None: #TODO is there a need for None to be allowed?
-                            if betterValueInfo[key] == bool:
-                                item[key] = bool(int(val)) # This may need some work
-                            elif betterValueInfo[key] == int:
-                                item[key] = int(val)
-                            elif betterValueInfo[key] == 'date':
-                                item[key] = datetime.strptime(val,'%Y-%m-%d').date()
-                            elif betterValueInfo[key] == 'datetime':
-                                item[key] = datetime.strptime(val,'%Y-%m-%d %H:%M:%S')
-                            elif betterValueInfo[key] == 'timestamp':
-                                item[key] = datetime.fromtimestamp(int(val))
-                            elif betterValueInfo[key] == 'custom':
-                                if endpKey == 'check': # check datetime combiner
-                                    try:
-                                        toAdd['last_run'] = datetime.strptime(f'{item['date']} {item['time']}','%Y-%m-%d %H:%M:%S')
-                                    except ValueError: # Never run
-                                        toAdd['last_run'] = None
-                                    keysToRemove.append('date')
-                                    keysToRemove.append('time')
-                            elif betterValueInfo[key] == 'datetimeUTC':
-                                item[key] = datetime.strptime(str(val +' UTC'),'%Y-%m-%d %H:%M:%S %Z')
-                                    
-                    if len(keysToRemove) > 0: # TODO gotta be a better way to do this
-                        item.update(toAdd) # Add new items
-                        for key in keysToRemove:
-                            item.pop(key) # Remove redundant items
-                    
+            formatted = tuple()
+            if endpoint == 'list_clients':
+                formatted = tuple(Clients.validate_python(content['client']))
+            elif endpoint == 'list_device_monitoring_details':
+                formatted = tuple()
+            if formatted: # Skip if nothing
+                return formatted # Tuple of data
+
         return content[endpointKeys[0]] if isinstance(endpointKeys,list) and len(endpointKeys) == 1 else content # Fix data
+    
     
     
 
@@ -356,9 +269,9 @@ class NAble:
     # Add Client, Add Site not yet working
     
     def clients(self,
-        devicetype:str=None,
+        devicetype:Optional[str]=None,
         name:str=None,
-        describe:bool=False):
+        describe:bool=False) -> tuple[Client, ...] | list:
         """Get all clients.  Optionally, filter by 'devicetype' and/or name.
         
         Device types
@@ -368,30 +281,32 @@ class NAble:
 
         Args:
             devicetype (str, optional): Filter by device type.
-            name (str, optional): Filter/search for client by name. Helpful if trying to get a specific ID
+            name (str, optional): Filter/search for client by name. Helpful if trying to get a specific ID.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            list: List of clients
+            tuple | list: List of clients. Tuple used if using new responses
         """
         #TODO improve search
         #TODO cache client list
+        
         #TODO Add IDONLY mode to return only a client anme and ID?
         response = self._requester(mode='get',endpoint='list_clients',rawParams=locals().copy())
-        if describe != True and name != None and response !=True:
-            popList = []
-            for inxID, client in enumerate(response):
-                if name.lower().strip() not in client['name'].lower().strip():
-                    popList.append(inxID)
-                    
-            popList.reverse() # invert list so highest number is first.
-            for pop in popList:
-                response.pop(pop)
+        if False:# TODO what the fuck is this?
+            if describe != True and name != None and response !=True:
+                popList = []
+                for inxID, client in enumerate(response):
+                    if name.lower().strip() not in client['name'].lower().strip():
+                        popList.append(inxID)
+                        
+                popList.reverse() # invert list so highest number is first.
+                for pop in popList:
+                    response.pop(pop)
         return response
 
     def sites(self,
         clientid:int,
-        describe:bool=False):
+        describe:bool=False) -> tuple[Site] | list[dict]:
         """Get all sites for a client.
 
         Args:
@@ -399,11 +314,14 @@ class NAble:
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
-            list: List of client sites
+            tuple | list: List of client sites.
         """
         
         response = self._requester(mode='get',endpoint='list_sites',rawParams=locals().copy())
-        return response
+        if not self.useOgValues:
+            return tuple(Sites.validate_python(response))
+        else: # Return unchanged response (dict)
+            return response
 
     def servers(self,
         siteid:int,
@@ -423,7 +341,7 @@ class NAble:
 
     def workstations(self,
         siteid:int,
-        describe:bool=None):
+        describe:bool=False) -> tuple[Workstation, ...] | list[dict]:
         """Get all workstations for site (including top level asset information if available).
         
         This will NOT provide check information details.
@@ -439,7 +357,11 @@ class NAble:
         """
 
         response = self._requester(mode='get',endpoint='list_workstations',rawParams=locals().copy())
-        return response
+        if not self.useOgValues:
+            return tuple(Workstations.validate_python(response))
+        else: # Return unchanged response (dict)
+            return response
+
         
     def agentlessAssets(self,# Unclear what an output from this would look like
         siteid:int,
@@ -484,7 +406,7 @@ class NAble:
                 raise ValueError(f'{clientid} has no {devicetype} devices')
             else:
                 clientDevices = response[0]
-            if isinstance(clientDevices['site'],dict):
+            if isinstance(clientDevices['site'], dict):
                 clientDevices['site'] = [clientDevices['site']]
             for siteNum, site in enumerate(clientDevices['site']):
                 if includeDetails == True:
@@ -657,8 +579,8 @@ class NAble:
         return response
     
     def failingChecks(self,
-        clientid:int=None,
-        check_type:str=None,
+        clientid:Optional[int]=None,
+        check_type:Optional[str]=None,
         describe:bool=False
         ):
         """List all failing checks for all clients
