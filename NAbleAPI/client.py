@@ -4,11 +4,12 @@
 # Imports
 import requests
 import xmltodict
+from xml.parsers.expat import ExpatError
 import logging
 from datetime import date, datetime
 from typing import Optional
 from pydantic import TypeAdapter
-from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstations, Workstation, ClientDevices, ClientDevice, DeviceDetails, DeviceDetail
+from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstations, Workstation, ClientDevices, ClientDevice, DeviceDetails, DeviceDetail, Checks, Check
 
 # # Known issues
 # mobile devices may not work
@@ -180,7 +181,7 @@ class NAble:
                     formattedData.update({item : value})
         return formattedData
     
-    def _responseFormatter(self,response:any, endpoint:str=None): # Clean up response data. Only non-describe items should ever be sent here
+    def _responseFormatter(self,response:any, endpoint:Optional[str] = None): # Clean up response data. Only non-describe items should ever be sent here
         #TODO add docstring!
         #TODO add single item response handling either in this tool or for the method (when only a single item can ever be returned, a list would not be needed)
         needsWrapper = ['list_device_asset_details', # Responds with everything in a list, why in gods name?
@@ -194,6 +195,9 @@ class NAble:
                 content = xmltodict.parse(response.content)['result'] # Response content
             except KeyError:
                 content = xmltodict.parse(response.content)
+            
+            except ExpatError: # No data
+                raise ValueError('No data')
             except Exception as e: # BAD BAD BAD but maybe will help me figure out whats gone wrong here
                 raise e
         else:
@@ -270,7 +274,7 @@ class NAble:
     
     def clients(self,
         devicetype:Optional[str]=None,
-        name:str=None,
+        name:Optional[str] = None,
         describe:bool=False) -> tuple[Client, ...] | list:
         """Get all clients.  Optionally, filter by 'devicetype' and/or name.
         
@@ -403,7 +407,12 @@ class NAble:
         response = self._requester(mode='get',endpoint='list_devices_at_client',rawParams=locals().copy())
         if describe != True:
             if not self.useOgValues:
-                return tuple(ClientDevices.validate_python(response))
+                devices = ClientDevices.validate_python(response)[0]
+                if includeDetails:
+                    print('BROKEN')
+                    
+                return devices
+                
             if response == None:
                 raise ValueError(f'{clientid} has no {devicetype} devices')
             else:
@@ -450,7 +459,7 @@ class NAble:
         """
         response = self._requester(mode='get',endpoint='list_device_monitoring_details',rawParams=locals().copy())
         if not self.useOgValues:
-            return tuple(DeviceDetails.validate_python(response))
+            return DeviceDetails.validate_python(response)[0]
         
         
         #TODO will this handle describe?
@@ -465,13 +474,13 @@ class NAble:
     
     def addClient(self, 
         name:str,
-        timezone:str=None,
-        licenseconfig:str=None, #XML
-        reportconfig:str=None, #XML
-        officehoursemail:str=None,
-        officehourssms:str=None,
-        outofofficehoursemail:str=None,
-        outofofficehourssms:str=None,
+        timezone:Optional[str] = None,
+        licenseconfig:Optional[str] = None, #XML
+        reportconfig:Optional[str] = None, #XML
+        officehoursemail:Optional[str] = None,
+        officehourssms:Optional[str] = None,
+        outofofficehoursemail:Optional[str] = None,
+        outofofficehourssms:Optional[str] = None,
         describe:bool=False
         ):
         """Create a new client, must at least provide a name.
@@ -499,10 +508,10 @@ class NAble:
     def addSite(self, 
         clientid:int,
         sitename:str,
-        router1:str=None,
-        router2:str=None,
+        router1:Optional[str] = None,
+        router2:Optional[str] = None,
         workstationtemplate:str='inherit',
-        servertemplate:str=None,
+        servertemplate:Optional[str] = None,
         describe:bool=False
         ):
         """Create a new site for a client.
@@ -528,12 +537,12 @@ class NAble:
         os:str,
         type:str,
         beta:bool=False,
-        mode:str=None,
+        mode:Optional[str] = None,
         proxyenabled:bool=None,
-        proxyhost:str=None,
+        proxyhost:Optional[str] = None,
         proxyport:int=None,
-        proxyusername:str=None,
-        proxypassword:str=None,
+        proxyusername:Optional[str] = None,
+        proxypassword:Optional[str] = None,
         describe:bool=False
         ):
         """Creates a Site Installation Package based on the specified installer type. Where successful a package is created and downloaded.
@@ -568,12 +577,14 @@ class NAble:
     # Checks and results
     def checks(self,
         deviceid:int,
+        includeOutput:bool=False,
         describe:bool=False
         ):
         """Lists all checks for device.  Gets slightly more infromation than the device details.
 
         Args:
             deviceid (int): Device ID
+            includeOutput (bool, optional): Include the check output (if present). Defaults to False.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
 
         Returns:
@@ -581,7 +592,16 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='list_checks',rawParams=locals().copy())
-        return response
+        if response:
+            if includeOutput:
+                for check in response: # Get response
+                    check['output'] = self.formattedCheckOutput(checkid=check['checkid'])['formatted_output']   
+            if not self.useOgValues:
+                return Checks.validate_python(response)
+            else:
+                return response
+        else:
+            raise ValueError(f'No checks for device: {deviceid}')
     
     def failingChecks(self,
         clientid:Optional[int]=None,
@@ -658,7 +678,7 @@ class NAble:
     def performanceHistory(self, #TODO test performance history
         deviceid:int,
         interval:int=15,
-        since:str=None,
+        since:Optional[str] = None,
         describe:bool=False
         ):
         """Obtains the data relating to all the Performance and Bandwidth Monitoring Checks running on the specified device.
@@ -683,7 +703,7 @@ class NAble:
     def driveSpaceHistory(self,
         deviceid:int,
         interval:str='DAY',
-        since:str=None,
+        since:Optional[str] = None,
         describe:bool=False
         ):
         """Returns the daily , weekly or monthly disk space usage information for a device. Only available for devices which have active FREE_DRIVE_SPACE check(s).
@@ -708,7 +728,7 @@ class NAble:
     def exchangeStorageHistory(self, #TODO Find someone to test Exchange Space history
         deviceid:int,
         interval:str,
-        since:str=None,
+        since:Optional[str] = None,
         describe:bool=False
         ):
         """Returns the daily (interval=DAY), weekly (interval=WEEK) or monthly (interval=MONTH) Exchange Store Size information for a device. Only available for devices where the (Windows server only) Exchange Store Size Check is configured.
@@ -730,10 +750,10 @@ class NAble:
     
     def clearCheck(self, #TODO test clearing check
         checkid:int,
-        private_note:str=None,
-        public_note:str=None,
-        clear_type:str=None,
-        clear_until:str=None,
+        private_note:Optional[str] = None,
+        public_note:Optional[str] = None,
+        clear_type:Optional[str] = None,
+        clear_until:Optional[str] = None,
         describe:bool=False
         ):
         """Clear a check status. After a check has failed, mark it as 'cleared', thereby acknowledging the cause of the failure.The check will be shown using an amber tick. A note describes the reason for the failure and the action taken by the engineer.
@@ -766,8 +786,8 @@ class NAble:
     
     def addNote(self,
         checkid:int,
-        private_note:str=None,
-        public_note:str=None,
+        private_note:Optional[str] = None,
+        public_note:Optional[str] = None,
         describe:bool=False
         ):
         """Add a public/private note to a check.  Check will be added by the admin account/account API key was retrieved from.
@@ -787,7 +807,7 @@ class NAble:
         return response
 
     def templates(self, 
-        devicetype:str=None,
+        devicetype:Optional[str] = None,
         describe:bool=False,          
         ):
         """List all monitoring templates. Optionally, filter by device type.
@@ -1449,7 +1469,7 @@ class NAble:
     
     def mavQuarantineList(self, # TODO seems to return nothing?
             deviceid:int,
-            items:str=None,
+            items:Optional[str] = None,
             av:str='bitdefender', 
             describe:bool=False
         ):
