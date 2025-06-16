@@ -101,24 +101,69 @@ class Workstation(BaseModel):
 Workstations = TypeAdapter(list[Workstation])
 
 # Device Details
-class DeviceDetail(BaseModel):
+class ClientDeviceWorkstation(BaseModel):
     deviceid: int = Field(validation_alias=AliasChoices('id'))
     name: str
+    user: str = Field(validation_alias=AliasChoices('username')) #TODO should this be user or username? Make it the same for Workstation and this
     description: str
-    user: str #TODO should this be user or username? Make it the same for Workstation and this
-    guid: str
-    os: str
-    agent_version: str #TODO this is returned as "Agent v10.13.8", I think it should be made to match workstation
-    lastresponse: datetime
-    lastresponse_utc: datetime
-    lastboot: datetime
-    checks: dict[str, int] # TODO make this show correctly
-    outages: dict
-    notes: dict
+    status: str
+    checkcount: list[dict[str, int]] # TODO make this show correctly
+    takecontrol: bool
     patch: bool
     mav: bool
     mob: bool
     systray: bool
-    mavbreak: bool
+    mavbreck: bool
+    webprotection: bool
+    riskintelligence: bool
+
+class ClientDeviceSite(BaseModel):
+    siteid: int = Field(validation_alias=AliasChoices('id'))
+    name: str
+    devices: list[ClientDeviceWorkstation] = Field(validation_alias=AliasChoices('workstation'))
+    
+    @field_validator('devices', mode='before')
+    def workstation_fix(cls, value): #Workstations are sometimes returned in dict format
+        if isinstance(value, dict):
+            return [value]
+        
+        else:
+            return value
+    
+class ClientDevice(BaseModel):
+    clientid: int = Field(validation_alias=AliasChoices('id'))
+    name: str
+    sites: list[ClientDeviceSite] = Field(validation_alias=AliasChoices('site'))
+    
+    @field_validator('sites', mode='before')
+    def site_fix(cls, value): # Sites are sometimes returned in dict format
+        if isinstance(value, dict):
+            return [value]
+        else:
+            return value
+
+
+ClientDevices = TypeAdapter(list[ClientDevice])
+
+class DeviceDetail(BaseModel):
+    deviceid: int = Field(validation_alias=AliasChoices('id'))
+    name: str
+    description: str
+    user: str = Field(validation_alias=AliasChoices('username')) #TODO should this be user or username? Make it the same for Workstation and this
+    guid: Optional[str] = None
+    os: str
+    agent_version: str = Field(validation_alias=AliasChoices('agent')) #TODO this is returned as "Agent v10.13.8", I think it should be made to match workstation
+    lastresponse: Optional[datetime] = None
+    lastresponse_utc: datetime
+    lastboot: datetime
+    checks: Optional[dict] = None # TODO make this show correctly
+    outages: Optional[dict] = None # TODO make this show correctly
+    notes: Optional[dict] = None # TODO make this show correctly
+    takecontrol: bool
+    patch: bool
+    mav: bool
+    mob: bool
+    systray: bool
+    mavbreck: bool
     
 DeviceDetails = TypeAdapter(list[DeviceDetail])

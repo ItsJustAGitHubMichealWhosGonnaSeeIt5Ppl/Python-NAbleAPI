@@ -8,7 +8,7 @@ import logging
 from datetime import date, datetime
 from typing import Optional
 from pydantic import TypeAdapter
-from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstations, Workstation
+from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstations, Workstation, ClientDevices, ClientDevice, DeviceDetails, DeviceDetail
 
 # # Known issues
 # mobile devices may not work
@@ -399,9 +399,11 @@ class NAble:
         Returns:
             list: All devices for a client.
         """
-    
+        #TODO fix include details
         response = self._requester(mode='get',endpoint='list_devices_at_client',rawParams=locals().copy())
         if describe != True:
+            if not self.useOgValues:
+                return tuple(ClientDevices.validate_python(response))
             if response == None:
                 raise ValueError(f'{clientid} has no {devicetype} devices')
             else:
@@ -446,8 +448,11 @@ class NAble:
         Returns:
             dict: Full device details
         """
-        response = self._requester(mode='get',endpoint='list_device_monitoring_details',rawParams=locals().copy())[0]
-
+        response = self._requester(mode='get',endpoint='list_device_monitoring_details',rawParams=locals().copy())
+        if not self.useOgValues:
+            return tuple(DeviceDetails.validate_python(response))
+        
+        
         #TODO will this handle describe?
         if int(response['checks']['@count']) > 0 and isinstance(response['checks']['check'], dict): # Convert single check from dict to list for consistency
             response['checks']['check'] = [response['checks']['check']]
