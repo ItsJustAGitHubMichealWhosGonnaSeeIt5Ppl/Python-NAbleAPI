@@ -86,20 +86,21 @@ class NAble:
                     raise e
                 return content
 
-    def __init__(self, region:str, key:str, logLevel:Optional[str]=None, useOriginalValues:bool=True):
+    def __init__(self, region:str, key:str, useOriginalValues:bool=False):
         """Intitialize your N-Sight instance.
 
         Args:
             region (str): Your tenant region, see wiki for complete list of regions.
             key (str): API key.
-            logLevel (str, optional): Log Level. Defaults to normal level. (not implemented).
-            useOriginalValues (bool, optional): Use Original values (keys and responses) in items. Names and values of some items in responses are confusing and onconsistent, so I have tried to clean them up and make them easier to use.  The downside to this is that NAbles documentation cannot be used when working with this library.  Anything that has been changed is documented in the ReadTheDocs for that method. Defaults to True (original names and values are kept).
+            useOriginalValues (bool, optional): Use Original values (keys and responses) in items. Names and values of some items in responses are confusing and onconsistent, so I have tried to clean them up and make them easier to use.  The downside to this is that NAbles documentation will be less useful.  Defaults to False.
 
         Raises:
             ValueError: _description_
             requests.exceptions.ConnectionError: _description_
         """
         
+        self.logger = logging.getLogger('NSight')
+        self.logger.info(f'Logging started for NSight')
         self.useOgValues = useOriginalValues # Defaults to True
         self.session = requests.Session()
         #TODO Make LogLevel actually do something
@@ -396,22 +397,33 @@ class NAble:
             clientid (:obj:`int`): Client ID.
             devicetype (str): Device type. [server, workstation, mobile_device].
             includeDetails (bool, optional): Include full device details for all devices. Defaults to False.
-            experimentalChecks (bool, optional): Whether to try experimental checks. includeDetails must be True. More information can be found in the documentation. Defaults to False.
+            experimentalChecks (bool, optional): Deprecated.
             describe (bool, optional): Returns a discription of the service. Defaults to False.
             
 
         Returns:
             list: All devices for a client.
         """
+        if experimentalChecks:
+            self.logger.warning('')
         #TODO fix include details
         response = self._requester(mode='get',endpoint='list_devices_at_client',rawParams=locals().copy())
         if describe != True:
             if not self.useOgValues:
                 devices = ClientDevices.validate_python(response)[0]
                 if includeDetails:
-                    print('BROKEN')
+                    for site in devices.sites:
+                        for device in site.devices:
+                            device = self.deviceDetails(deviceid=device.deviceid)
+                            # IN PROGRESS
                     
                 return devices
+            
+            
+            else:
+                if includeDetails:
+                    raise ValueError('includeDetails can only be used if useOriginalValues is disabled.')
+                return response
                 
             if response == None:
                 raise ValueError(f'{clientid} has no {devicetype} devices')
@@ -439,9 +451,6 @@ class NAble:
                         device['riskintelligence'] = riskInt
                         newSiteObj['devices'] += [device]
                     clientDevices['site'][siteNum] = newSiteObj
-            return clientDevices
-        else:
-            return response #TODO simplify this
     
     def deviceDetails(self,
         deviceid:int,

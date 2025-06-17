@@ -33,7 +33,7 @@ for client in selectedClients:
     for site in siteDevices:
         for device in site.devices:
             try:
-                checks = deviceChecks = nsite.checks(deviceid=device.deviceid, includeOutput=True)
+                checks = nsite.checks(deviceid=device.deviceid, includeOutput=True)
                 checkFound = False # Adds an alert if the check wasn't found
                 for check in checks:
                     if 'Script Check - Check Local Admins' in check.description: # Check exists and has run

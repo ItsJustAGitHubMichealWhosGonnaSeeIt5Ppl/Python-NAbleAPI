@@ -1,6 +1,6 @@
 # BUILT-IN
 from typing import Optional, Literal, TypeVar
-import datetime
+import datetime as dt
 from ipaddress import IPv4Address
 
 # EXTERNAL
@@ -17,7 +17,7 @@ class Client(BaseModel):
     view_dashboard: bool
     view_wkstsn_assets: bool
     dashboard_username: Optional['str'] = None
-    creation_date: datetime.date
+    creation_date: dt.date
     server_count: int
     workstation_count: int
     mobile_device_count: int
@@ -30,7 +30,7 @@ class Site(BaseModel):
     name: str
     siteid: int
     connection_ok: bool
-    creation_date: Optional[datetime.date] = None
+    creation_date: Optional[dt.date] = None
     primary_router: Optional[str] = None
     secondary_router: Optional[str] = None
     
@@ -44,11 +44,11 @@ class Workstation(BaseModel):
     deviceid: int = Field(validation_alias=AliasChoices('workstationid')) # I like device ID better
     guid: str
     description: str
-    install_date: datetime.date
+    install_date: dt.date
     last_boot_time: int # TODO is this a unix timestamp
     dsc_active: bool
     atz_dst_date: str # TODO this is when daylight savings is set, and does not include a year.  Maybe I can add a year?
-    utc_apt: datetime.datetime #TODO set timezone!
+    utc_apt: dt.datetime #TODO set timezone!
     utc_offset: int # UTC offset in seconds
     user: str
     domain: Optional[str] = None
@@ -67,14 +67,14 @@ class Workstation(BaseModel):
     active_247: bool
     check_interval_247: int # Assuming minutes
     status_247: int #TODO figure out what these are
-    local_date_247: datetime.date
-    local_time_247: datetime.time
-    utc_time_247: datetime.datetime # TODO set timezone to UTC
+    local_date_247: dt.date
+    local_time_247: dt.time
+    utc_time_247: dt.datetime # TODO set timezone to UTC
     dsc_hour: int
     dsc_status: int # Assuming whether or not it is currently daylight savings
-    dsc_local_date: datetime.date
-    dsc_local_time: datetime.time
-    dsc_utc_time: datetime.datetime # Set to UTC
+    dsc_local_date: dt.date
+    dsc_local_time: dt.time
+    dsc_utc_time: dt.datetime # Set to UTC
     tz_bias: int
     tz_dst_bias: int
     tz_std_bias: int
@@ -92,7 +92,7 @@ class Workstation(BaseModel):
     os_serial_number: Optional[str] = None
     os_product_key: Optional[str] = None
     os_type:Optional[int] = None
-    last_scan_time: datetime.datetime
+    last_scan_time: dt.datetime
     
     @field_validator('agent_version') # Convert version from 9_10_11 to 9.10.11
     def agent_ver(cls, value):
@@ -116,6 +116,43 @@ class ClientDeviceWorkstation(BaseModel):
     mavbreck: bool
     webprotection: bool
     riskintelligence: bool
+    guid: Optional[str] = None
+    os: Optional[str] = None
+    agent_version: Optional[str] = Field(default=None, validation_alias=AliasChoices('agent')) #TODO this is returned as "Agent v10.13.8", I think it should be made to match workstation
+    lastresponse: Optional[dt.datetime] = None
+    lastresponse_utc: Optional[dt.datetime] = None
+    lastboot: Optional[dt.datetime] = None
+    checks: Optional[dict] = None # TODO make this show correctly
+    outages: Optional[dict] = None # TODO make this show correctly
+    notes: Optional[dict] = None # TODO make this show correctly
+    
+    @field_validator('checks')
+    def check_converter(cls, value):
+        if value:
+            if int(value['@count']) == 0:
+                return {
+                    'count':0,
+                    'checks': tuple()
+                }
+                
+            else:
+                return {
+                    'count': int(value['@count']),
+                    'checks': tuple(DeviceDetailChecks.validate_python(value['check']))
+                }
+        else:
+            return None
+    
+    @field_validator('lastresponse', 'lastresponse_utc', 'lastboot', mode='before')
+    def datetime_fix(cls, value):
+        if value: # Sometimes its none, idk?
+            try:
+                return dt.datetime.strptime(value, "%Y-%m-%d %H:%m:%s").date()
+            except ValueError: # Invalid year
+                return None
+        else:
+            return None
+
 
 class ClientDeviceSite(BaseModel):
     siteid: int = Field(validation_alias=AliasChoices('id'))
@@ -141,10 +178,50 @@ class ClientDevice(BaseModel):
             return [value]
         else:
             return value
-
+    
+    
 
 ClientDevices = TypeAdapter(list[ClientDevice])
 
+# Device Details
+class DeviceDetailCheck(BaseModel):
+    checkid: int
+    item_type: str = Field(validation_alias=AliasChoices('dsc_247'))
+    description: str
+    status: str = Field(validation_alias=AliasChoices('checkstatus'))
+    extra: Optional[str] = None
+    datetime: Optional[dt.datetime] = Field(validation_alias=AliasChoices('datetime'))
+    consecutive_fails: int
+    emailalerts: bool
+    emailrecoveryalerts: bool
+    smsalerts: bool
+    smsrecoveryalerts: bool
+    servertime: dt.datetime
+    
+    @field_validator('datetime', mode='before')
+    def datetime_fix(cls, value):
+        if value: # Sometimes its none, idk?
+            try:
+                return dt.datetime.strptime(value, "%Y-%m-%d %H:%m:%s").date()
+            except ValueError: # Invalid year
+                return None
+        else:
+            return None
+    
+    @field_validator('item_type', mode='before')
+    def convert_item(cls, value):
+        types = {
+            1: '247',
+            2: 'dsc',
+            3: 'scheduled_task',
+            4: 'mav_check',
+            6: 'mob_check'
+        }
+        return types[int(value)] # change status to something usable
+    
+DeviceDetailChecks = TypeAdapter(list[DeviceDetailCheck])
+
+    
 class DeviceDetail(BaseModel):
     deviceid: int = Field(validation_alias=AliasChoices('id'))
     name: str
@@ -153,9 +230,9 @@ class DeviceDetail(BaseModel):
     guid: Optional[str] = None
     os: str
     agent_version: str = Field(validation_alias=AliasChoices('agent')) #TODO this is returned as "Agent v10.13.8", I think it should be made to match workstation
-    lastresponse: Optional[datetime.datetime] = None
-    lastresponse_utc: datetime.datetime
-    lastboot: datetime.datetime
+    lastresponse: Optional[dt.datetime] = None
+    lastresponse_utc: dt.datetime
+    lastboot: dt.datetime
     checks: Optional[dict] = None # TODO make this show correctly
     outages: Optional[dict] = None # TODO make this show correctly
     notes: Optional[dict] = None # TODO make this show correctly
@@ -165,10 +242,30 @@ class DeviceDetail(BaseModel):
     mob: bool
     systray: bool
     mavbreck: bool
+
     
     @field_validator('agent_version') # Convert version from 9_10_11 to 9.10.11
     def agent_ver(cls, value):
         return value.replace('Agent v', '')
+    
+    @field_validator('checks')
+    def check_converter(cls, value):
+        if value:
+            if int(value['@count']) == 0:
+                return {
+                    'count':0,
+                    'checks': tuple()
+                }
+                
+            else:
+                if isinstance(value['check'], dict):
+                    value['check'] = [value['check']] # Evil people
+                return {
+                    'count': int(value['@count']),
+                    'checks': tuple(DeviceDetailChecks.validate_python(value['check']))
+                }
+        else:
+            return None
     
 DeviceDetails = TypeAdapter(list[DeviceDetail])
 
@@ -183,14 +280,14 @@ class Check(BaseModel):
     sync_status: str
     description: str
     status: str = Field(validation_alias=AliasChoices('statusid'))
-    date: Optional[datetime.date] = None
-    time: Optional[datetime.time] = None
-    utc_run: Optional[datetime.datetime] = None
+    date: Optional[dt.date] = None
+    time: Optional[dt.time] = None
+    utc_run: Optional[dt.datetime] = None
     output: Optional[str] = None
-    email: bool
-    emailrecovery: bool
-    sms: bool
-    smsrecovery: bool
+    emailalerts: bool = Field(validation_alias=AliasChoices('email'))
+    emailrecoveryalerts: bool = Field(validation_alias=AliasChoices('emailrecovery'))
+    smsalerts: bool = Field(validation_alias=AliasChoices('sms'))
+    smsrecoveryalerts: bool = Field(validation_alias=AliasChoices('smsrecovery'))
     check_type: int # TODO convert to actual info
     item_type: str = Field(validation_alias=AliasChoices('dsc_247'))
     consecutive_fails: int
@@ -198,14 +295,14 @@ class Check(BaseModel):
     @field_validator('date', mode='before')
     def date_fix(cls, value):
         try:
-            return datetime.datetime.strptime(value, "%Y-%m-%d").date()
+            return dt.datetime.strptime(value, "%Y-%m-%d").date()
         except ValueError: # Invalid year
             return None
         
     @field_validator('time', mode='before')
     def time_fix(cls, value):
         try:
-            return datetime.datetime.strptime(value, "%H:%m:%s").time()
+            return dt.datetime.strptime(value, "%H:%m:%s").time()
         except ValueError: # Invalid year
             return None
         
@@ -213,7 +310,7 @@ class Check(BaseModel):
     def datetime_fix(cls, value):
         if value: # Sometimes its none, idk?
             try:
-                return datetime.datetime.strptime(value, "%Y-%m-%d %H:%m:%s").date()
+                return dt.datetime.strptime(value, "%Y-%m-%d %H:%m:%s").date()
             except ValueError: # Invalid year
                 return None
         else:
