@@ -3,6 +3,7 @@
 
 # Imports
 import requests
+import time
 import xmltodict
 from xml.parsers.expat import ExpatError
 import logging
@@ -57,10 +58,18 @@ class NAble:
         else:
             paramsDict = {}
         
-        try:
-            response  = requests.request(mode, url, params = paramsDict)
-        except Exception as e:
-            raise e
+        timeout = 0 # Avoid issues with SSL timeout
+        while timeout < 5: # Try 5 times
+            try:
+                response  = requests.request(mode, url, params = paramsDict)
+                break
+            except requests.exceptions.SSLError as e:
+                timeout +=1
+                self.logger.warning(f'SSL error: {e}.  Waiting 4 seconds before trying again. This has happened {timeout} times.')
+                time.sleep(4) # Sleep for 4 seconds and then try again
+                
+            except Exception as e:
+                raise e
             
         # Error checking
         if response.status_code == 403: # invalid URL
@@ -603,8 +612,11 @@ class NAble:
         response = self._requester(mode='get',endpoint='list_checks',rawParams=locals().copy())
         if response:
             if includeOutput:
-                for check in response: # Get response
-                    check['output'] = self.formattedCheckOutput(checkid=check['checkid'])['formatted_output']   
+                for check in response:# Get response
+                    try: # Not all checks have output
+                        check['output'] = self.formattedCheckOutput(checkid=check['checkid'])['formatted_output']   
+                    except ValueError:
+                        check['output'] = None
             if not self.useOgValues:
                 return Checks.validate_python(response)
             else:
