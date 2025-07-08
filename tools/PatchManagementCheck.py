@@ -7,7 +7,7 @@ import csv
 
 nsight = NSightFromEnv(useOriginalValues=False)
 
-lastUsers = simpleCSVCreator('patch_management.csv', ['Client', 'Site', 'Device', 'Patch Management', 'Info'])
+lastUsers = simpleCSVCreator('patch_management.csv', ['Client', 'Site', 'Device', 'Patch Management', 'Check Status', 'Last Run', 'Consecutive Fails', 'Output'])
 
 csvRows = []
 clients = nsight.clients()
@@ -19,21 +19,32 @@ for client in clients:
         
     for site in clientDevices.sites:
         for device in site.devices:
+            print(f'Checking {device.name} for {client.name}')
             deviceDetails = nsight.deviceDetails(deviceid=device.deviceid)
             if 'macos' in str(deviceDetails.os).lower(): # Skip macs, they dont have patch management
                 continue
-            extraStr = ''
+            outputStr = 'N/A'
+            PMELastRun = 'No Check'
+            PMECheckStatus = 'No Check'
+            consecFails = 'N/A'
             if device.patch: # Try and find the patch management check
-                for check in deviceDetails.checks['checks']:
+                checks = nsight.checks(deviceid=device.deviceid, includeOutput=True)
+                for check in checks:
                     if check.description == 'Patch Status Check':
-                        extraStr = check.extra
-                        break
+                        PMECheckStatus = check.status
+                        outputStr = check.output if check.output else 'Check Exists, no extra info'
+                        PMELastRun = check.date.strftime("%Y-%m-%d") if check.date else "Unknown"
+                        consecFails = check.consecutive_fails
+            print(f'Adding {device.name} for {client.name}')
             csvRows.append([
                 client.name,
                 site.name,
                 device.name,
                 'Yes' if device.patch else 'No',
-                extraStr
+                PMECheckStatus,
+                PMELastRun,
+                consecFails,
+                outputStr
                 ])
         
     pass
