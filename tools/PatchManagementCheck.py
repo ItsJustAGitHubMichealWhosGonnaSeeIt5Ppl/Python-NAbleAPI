@@ -48,6 +48,7 @@ for client in clients:
                 ])
         
     pass
-with open(lastUsers,'a') as csvF: # Save to CSV
+
+with open(lastUsers, 'a') as csvF: # Save to CSV
     csvwriter = csv.writer(csvF)
     csvwriter.writerows(csvRows)
