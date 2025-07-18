@@ -224,13 +224,16 @@ class NAble:
         
         # Errors       
         elif status == 'FAIL': 
-            if int(content['error']['errorcode']) == 3: # Login failed, invalid key
-                raise ValueError(f'Login failed. Your region or API key is wrong.')
-            elif int(content['error']['errorcode']) == 4: 
-                #Invalid param, EG: bad checkid, bad deviceid.
-                raise ValueError(f'{content['error']['message']}')
+            if 'errorcode' in content['error']: # Sometimes there isnt an error code lmao
+                if int(content['error']['errorcode']) == 3: # Login failed, invalid key
+                    raise ValueError(f'Login failed. Your region or API key is wrong.')
+                elif int(content['error']['errorcode']) == 4: 
+                    #Invalid param, EG: bad checkid, bad deviceid.
+                    raise ValueError(f'{content['error']['message']}')
+                else:
+                    raise Exception(content['error']['message'])
             else:
-                raise Exception(content['error']['message'])
+                raise Exception(content['error']['message']) 
         else:
             raise Exception(f'Unknown error: {status}')
 

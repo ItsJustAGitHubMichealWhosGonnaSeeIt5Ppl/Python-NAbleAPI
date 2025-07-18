@@ -280,7 +280,7 @@ class Check(BaseModel):
     sync_status: str
     description: str
     status: str = Field(validation_alias=AliasChoices('statusid'))
-    date: Optional[dt.date] = None
+    date: Optional[dt.date] = None # Im pretty sure this is the last time the check ran
     time: Optional[dt.time] = None
     utc_run: Optional[dt.datetime] = None
     output: Optional[str] = None
@@ -318,7 +318,7 @@ class Check(BaseModel):
     
     @field_validator('sync_status', mode='before')
     def convert_sync(cls, value):
-        sync = {
+        sync = { # 71 = awaiting sync I think
             0: 'synced'
         }
         try: 
