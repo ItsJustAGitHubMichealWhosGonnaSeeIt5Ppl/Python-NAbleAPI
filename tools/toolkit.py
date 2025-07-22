@@ -205,3 +205,31 @@ def simpleCSVCreator(filename:str, fields:list): # Creates CSVs
 
     print(creationType  + f' CSV file: {filename}')
     return filename
+
+def getDevicesForClients(nsight, clients:list=None): # Get all devices for clients
+    if not clients:
+        clients = nsight.clients()
+        
+    clientDevices = list()
+    for client in clients:
+        logging.info(f'Checking {client.name}')
+        siteDevices = []
+        if int(client.device_count) == 0: # Skip clients with no devices
+            logging.info(f'{client.name} has no devices.')
+            continue
+        
+        if int(client.workstation_count) == 0: # Check for workstations
+            logging.info(f'{client.name} has no workstations.')
+        else:
+            siteDevices += nsight.clientDevices(clientid=client.clientid,devicetype='workstation').sites
+
+        if int(client.server_count) == 0: # Check for workstations
+            print(f'{client.name} has no servers.')
+            
+        else:
+            siteDevices += nsight.clientDevices(clientid=client.clientid,devicetype='server').sites
+        
+        clientDevices.append({'client':client, 
+                              'devices':siteDevices})
+        
+    return clientDevices
