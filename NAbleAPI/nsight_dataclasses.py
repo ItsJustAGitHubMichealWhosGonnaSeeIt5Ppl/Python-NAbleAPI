@@ -45,21 +45,21 @@ class Workstation(BaseModel):
     guid: str
     description: str
     install_date: dt.date
-    last_boot_time: int # TODO is this a unix timestamp
+    last_boot_time: Optional[int] = None # TODO is this a unix timestamp
     dsc_active: bool
     atz_dst_date: str # TODO this is when daylight savings is set, and does not include a year.  Maybe I can add a year?
     utc_apt: dt.datetime #TODO set timezone!
     utc_offset: int # UTC offset in seconds
-    user: str
+    user: Optional[str] = None 
     domain: Optional[str] = None
-    manufacturer: str
-    model: str
-    ip: IPv4Address
+    manufacturer: Optional[str]
+    model: Optional[str] = None
+    ip: Optional[IPv4Address] = None
     external_ip: IPv4Address
     mac1: Optional[str] = None
     mac2: Optional[str] = None
     mac3: Optional[str] = None
-    os: str
+    os: Optional[str] = None
     os_details: str
     agent_version: str 
     agent_mode: int #TODO figure out what these are
@@ -81,18 +81,18 @@ class Workstation(BaseModel):
     tz_mode: int
     tz_dst_date: str
     tz_std_date: str
-    assetid: int
-    wins_name: str
-    role: int
-    chassis_type: int
-    device_serial: str
-    processor_count: int
-    total_memory: int # Bytes
+    assetid: Optional[int] = None
+    wins_name: Optional[str] = None
+    role: Optional[int] = None
+    chassis_type: Optional[int] = None
+    device_serial: Optional[str] = None
+    processor_count: Optional[int] = None
+    total_memory: Optional[int] = None # Bytes
     service_pack: Optional[int] = None
     os_serial_number: Optional[str] = None
     os_product_key: Optional[str] = None
-    os_type:Optional[int] = None
-    last_scan_time: dt.datetime
+    os_type: Optional[int] = None
+    last_scan_time: Optional[dt.datetime] = None
     
     @field_validator('agent_version') # Convert version from 9_10_11 to 9.10.11
     def agent_ver(cls, value):
@@ -104,7 +104,7 @@ Workstations = TypeAdapter(list[Workstation])
 class ClientDeviceWorkstation(BaseModel):
     deviceid: int = Field(validation_alias=AliasChoices('id'))
     name: str
-    user: str = Field(validation_alias=AliasChoices('username')) #TODO should this be user or username? Make it the same for Workstation and this
+    user: Optional[str] = Field(default=None, validation_alias=AliasChoices('username')) # Some devices don't return a user at all. #TODO should this be user or username? Make it the same for Workstation and this. 
     description: str
     status: str
     checkcount: list[dict[str, int]] # TODO make this show correctly
@@ -226,7 +226,7 @@ class DeviceDetail(BaseModel):
     deviceid: int = Field(validation_alias=AliasChoices('id'))
     name: str
     description: str
-    user: str = Field(validation_alias=AliasChoices('username')) #TODO should this be user or username? Make it the same for Workstation and this
+    user: Optional[str] = Field(default=None, validation_alias=AliasChoices('username')) # Some devices don't return a user at all. #TODO should this be user or username? Make it the same for Workstation and this
     guid: Optional[str] = None
     os: str
     agent_version: str = Field(validation_alias=AliasChoices('agent')) #TODO this is returned as "Agent v10.13.8", I think it should be made to match workstation

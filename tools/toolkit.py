@@ -206,11 +206,11 @@ def simpleCSVCreator(filename:str, fields:list): # Creates CSVs
     print(creationType  + f' CSV file: {filename}')
     return filename
 
-def getDevicesForClients(nsight, clients:list=None): # Get all devices for clients
-    if not clients:
+def getDevicesForClients(nsight, clients:Optional[list]=None): # Get all devices for clients, does not include device details
+    if clients == None: # More explicit
         clients = nsight.clients()
         
-    clientDevices = list()
+    clientDevices = list() 
     for client in clients:
         logging.info(f'Checking {client.name}')
         siteDevices = []

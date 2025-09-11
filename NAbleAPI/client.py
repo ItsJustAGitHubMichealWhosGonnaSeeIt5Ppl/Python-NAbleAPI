@@ -18,7 +18,6 @@ from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstatio
 
 #TODO add logger
 #TODO add testing
-#TODO Add typeddict or similar to document responses from items https://peps.python.org/pep-0589/
 #TODO add reference ability for things like clientid, etc.
 #TODO Document errors in readthedocs
 #TODO fix bumpver
@@ -27,7 +26,7 @@ from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstatio
 version = '0.0.10' # Remember to update the docstring at the top too!
 
 class NAble:
-    """NAble Data Extraction API Wrapper
+    """NAble NSight Data Extraction API Wrapper
     Version: {version}
         
     Official Documentation: https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm
@@ -38,8 +37,9 @@ class NAble:
     Args:
         region (str): Your dashboard region (not all URLs have been verified)
         key (str): Your NAble API key
+        
     """.format(version=version)
-    def _requester(self,mode,endpoint,rawParams=None):
+    def _requester(self, mode, endpoint, rawParams=None):
         """Make requests to NAble API and do basic response handling. Also handles errors.
 
         Args:
@@ -522,7 +522,7 @@ class NAble:
         """
         
         #TODO add error handling
-        response = self._requester(mode='get',endpoint='add_client',rawParams=locals().copy())
+        response = self._requester(mode='get',endpoint='add_client', rawParams=locals().copy())
         return response
     
     
@@ -549,7 +549,7 @@ class NAble:
             dict:  Status and site ID is successful. 
         """
         #TODO add better error handling
-        response = self._requester(mode='get',endpoint='add_site',rawParams=locals().copy())
+        response = self._requester(mode='get',endpoint='add_site', rawParams=locals().copy())
         return response
     
     def siteInstallPackage(self,
