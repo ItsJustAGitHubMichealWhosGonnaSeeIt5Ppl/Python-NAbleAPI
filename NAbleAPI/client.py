@@ -10,7 +10,7 @@ import logging
 from datetime import date, datetime
 from typing import Optional
 from pydantic import TypeAdapter
-from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstations, Workstation, ClientDevices, DeviceDetails, Checks, FailedChecks, FailedCheckTypes
+from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstations, Workstation, ClientDevices, DeviceDetails, Checks, FailedChecks, FailedCheckTypes, Outages
 
 # # Known issues
 # mobile devices may not work
@@ -703,7 +703,10 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='list_outages',rawParams=locals().copy())
-        return response
+        if not self.useOgValues:
+                return Outages.validate_python(response)
+        else:
+            return response
     
     def performanceHistory(self, #TODO test performance history
         deviceid:int,

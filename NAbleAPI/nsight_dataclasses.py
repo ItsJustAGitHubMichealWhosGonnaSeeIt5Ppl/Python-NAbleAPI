@@ -425,3 +425,21 @@ class FailedCheckClient(BaseModel):
             return value
 
 FailedChecks = TypeAdapter(list[FailedCheckClient])
+
+# Outages
+class Outage(BaseModel): # So many fields are not even listed in the documentation, no idea why
+    model_config = ConfigDict(extra="forbid")
+    
+    reason: str # CHECK_FAILURE, DEVICE_OFFLINE, DEVICE_OVERDUE, SITE_DOWN, UPLOAD_ERROR # TODO maybe make literals for this?
+    state: str # OPEN, CLOSED # TODO maybe make literals for this?
+    utc_start: dt.datetime
+    utc_end: Optional[dt.datetime] = None
+    outageid: int = Field(validation_alias=AliasChoices('outage_id'))
+    checkid: Optional[int] = Field(validation_alias=AliasChoices('check_id'),default=None) # Not supplied for DEVICE_OFFLINE errors
+    check_type: Optional[int] = None # Not supplied for DEVICE_OFFLINE errors
+    check_description: Optional[str] = None
+    check_status: Optional[str] = None # PASSING, FAILING, CLEARED # TODO maybe make literals for this?
+    check_frequency: Optional[str] = None # 24x7, DAILY # TODO maybe make literals for this?
+    cause: Optional[str] = None
+
+Outages = TypeAdapter(list[Outage])
