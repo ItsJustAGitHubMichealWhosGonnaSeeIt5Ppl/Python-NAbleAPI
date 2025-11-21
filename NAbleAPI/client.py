@@ -10,7 +10,7 @@ import logging
 from datetime import date, datetime
 from typing import Optional
 from pydantic import TypeAdapter
-from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstations, Workstation, ClientDevices, ClientDevice, DeviceDetails, DeviceDetail, Checks, Check
+from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstations, Workstation, ClientDevices, DeviceDetails, Checks, FailedChecks
 
 # # Known issues
 # mobile devices may not work
@@ -319,11 +319,15 @@ class NAble:
                 popList.reverse() # invert list so highest number is first.
                 for pop in popList:
                     response.pop(pop)
-        return response
+        if not self.useOgValues:
+            return tuple(Clients.validate_python(response))
+        
+        else:
+            return response
 
     def sites(self,
         clientid:int,
-        describe:bool=False) -> tuple[Site] | list[dict]:
+        describe:bool=False) -> tuple[Site,...] | list[dict]:
         """Get all sites for a client.
 
         Args:
@@ -645,7 +649,10 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='list_failing_checks',rawParams=locals().copy())
-        return response
+        if not self.useOgValues:
+                return FailedChecks.validate_python(response)
+        else:
+            return response
 
     def checkConfig(self,
         checkid:int,
@@ -694,7 +701,6 @@ class NAble:
         Returns:
             list: List of outages
         """
-        
         
         response = self._requester(mode='get',endpoint='list_outages',rawParams=locals().copy())
         return response

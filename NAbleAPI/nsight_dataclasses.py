@@ -1,7 +1,7 @@
 # BUILT-IN
 from typing import Optional, Literal, TypeVar
 import datetime as dt
-from ipaddress import IPv4Address
+from ipaddress import IPv4Address, IPv6Address
 
 # EXTERNAL
 from pydantic import BaseModel, Field, PositiveInt, PositiveFloat, field_validator, TypeAdapter, AliasChoices, ConfigDict
@@ -45,7 +45,7 @@ class Workstation(BaseModel):
     guid: str
     description: str
     install_date: dt.date
-    last_boot_time: Optional[int] = None # TODO is this a unix timestamp
+    last_boot_time: Optional[int] = None # TODO This is a unix timestamp (why)
     dsc_active: bool
     atz_dst_date: str # TODO this is when daylight savings is set, and does not include a year.  Maybe I can add a year?
     utc_apt: dt.datetime #TODO set timezone!
@@ -54,8 +54,8 @@ class Workstation(BaseModel):
     domain: Optional[str] = None
     manufacturer: Optional[str]
     model: Optional[str] = None
-    ip: Optional[IPv4Address] = None
-    external_ip: IPv4Address
+    ip: Optional[IPv4Address | IPv6Address] = None
+    external_ip: IPv4Address | IPv6Address
     mac1: Optional[str] = None
     mac2: Optional[str] = None
     mac3: Optional[str] = None
@@ -272,8 +272,6 @@ DeviceDetails = TypeAdapter(list[DeviceDetail])
 
 
 # Check
-
-
 class Check(BaseModel):
     checkid: int
     uid: int
@@ -349,3 +347,43 @@ class Check(BaseModel):
         return types[int(value)] # change status to something usable
     
 Checks = TypeAdapter(list[Check])
+
+# Failing checks
+class FailedCheck(BaseModel):
+    checkid: int
+    check_type: int # Should this just say the type?
+    description: str
+    dsc_247: int # Whether the check is DSC or 247 
+    date: dt.date
+    time: dt.time
+    formatted_output: Optional[str]
+    checkstatus: str
+    
+class FailedCheckWorkstation(BaseModel):
+    deviceid: int = Field(validation_alias=AliasChoices('id'))
+    name: str
+    failed_checks: Optional[list[FailedCheck]]
+    
+    @field_validator('failed_checks', mode='before')
+    def get_checks(cls, value):
+        if isinstance(value["check"], dict):
+            return [value["check"]] # If only a single failed check exists then its not in a list, why? who knows
+        else:
+            return value["check"]
+    
+class FailedCheckSite(BaseModel):
+    siteid: int
+    name: str
+    workstations: Optional[list[FailedCheckWorkstation]]
+    servers: Optional[list] # TODO add server failed checks
+    
+    @field_validator('workstations', mode='before')
+    def get_workstations(cls, value):
+        return  value["workstation"] # IDK why it returns them like this but it does
+    
+class FailedCheckClient(BaseModel):
+    clientid: int
+    name: str
+    sites: list[FailedCheckSite] = Field(validation_alias=AliasChoices('site'))
+
+FailedChecks = TypeAdapter(list[FailedCheckClient])
