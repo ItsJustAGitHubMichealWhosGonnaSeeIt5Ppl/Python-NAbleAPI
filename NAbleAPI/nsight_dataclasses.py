@@ -349,6 +349,8 @@ class Check(BaseModel):
 Checks = TypeAdapter(list[Check])
 
 # Failing checks
+FailedCheckTypes = Literal["checks", "tasks", "random"]
+
 class FailedCheck(BaseModel):
     checkid: int
     check_type: int # Should this just say the type?
@@ -359,10 +361,11 @@ class FailedCheck(BaseModel):
     formatted_output: Optional[str]
     checkstatus: str
     
-class FailedCheckWorkstation(BaseModel):
+class FailedCheckDevice(BaseModel):
     deviceid: int = Field(validation_alias=AliasChoices('id'))
     name: str
-    failed_checks: Optional[list[FailedCheck]]
+    failed_checks: Optional[list[FailedCheck]] = []
+    offline: Optional[dict] = None # TODO what the fuck is this? 
     
     @field_validator('failed_checks', mode='before')
     def get_checks(cls, value):
@@ -374,16 +377,35 @@ class FailedCheckWorkstation(BaseModel):
 class FailedCheckSite(BaseModel):
     siteid: int
     name: str
-    workstations: Optional[list[FailedCheckWorkstation]]
-    servers: Optional[list] # TODO add server failed checks
+    workstations: Optional[list[FailedCheckDevice]]
+    servers: Optional[list[FailedCheckDevice]] # TODO add server failed checks
     
     @field_validator('workstations', mode='before')
     def get_workstations(cls, value):
-        return  value["workstation"] # IDK why it returns them like this but it does
+        if value:
+            if isinstance(value["workstation"], dict):
+                return [value["workstation"]] # If only a single failed site exists then its not in a list, why? who knows
+            else:
+                return value["workstation"]
+        
+    @field_validator('servers', mode='before')
+    def get_servers(cls, value):
+        if value: # If it's none, move one
+            if isinstance(value["server"], dict):
+                return [value["server"]] # If only a single failed site exists then its not in a list, why? who knows
+            else:
+                return value["server"]
     
 class FailedCheckClient(BaseModel):
     clientid: int
     name: str
     sites: list[FailedCheckSite] = Field(validation_alias=AliasChoices('site'))
+    
+    @field_validator('sites', mode='before')
+    def get_sites(cls, value):
+        if isinstance(value, dict):
+            return [value] # If only a single failed site exists then its not in a list, why? who knows
+        else:
+            return value
 
 FailedChecks = TypeAdapter(list[FailedCheckClient])

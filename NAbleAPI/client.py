@@ -10,7 +10,7 @@ import logging
 from datetime import date, datetime
 from typing import Optional
 from pydantic import TypeAdapter
-from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstations, Workstation, ClientDevices, DeviceDetails, Checks, FailedChecks
+from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstations, Workstation, ClientDevices, DeviceDetails, Checks, FailedChecks, FailedCheckTypes
 
 # # Known issues
 # mobile devices may not work
@@ -21,7 +21,7 @@ from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstatio
 #TODO add reference ability for things like clientid, etc.
 #TODO Document errors in readthedocs
 #TODO fix bumpver
-#TODO add siteDevices to get all site devices
+#TODO stop using locals() 
 
 version = '0.0.10' # Remember to update the docstring at the top too!
 
@@ -633,7 +633,7 @@ class NAble:
     
     def failingChecks(self,
         clientid:Optional[int]=None,
-        check_type:Optional[str]=None,
+        check_type:Optional[FailedCheckTypes]=None,
         describe:bool=False
         ):
         """List all failing checks for all clients
