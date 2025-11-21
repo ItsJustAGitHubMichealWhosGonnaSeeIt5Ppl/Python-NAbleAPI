@@ -368,8 +368,8 @@ class FailedCheck(BaseModel):
     dsc_247: int # Whether the check is DSC or 247 
     date: dt.date
     time: dt.time
-    startdate: Optional[dt.date] # These are supposedly required yet half the time aren't returned
-    starttime: Optional[dt.time] # These are supposedly required yet half the time aren't returned
+    startdate: Optional[dt.date] = None # These are supposedly required yet half the time aren't returned
+    starttime: Optional[dt.time] = None # These are supposedly required yet half the time aren't returned
     formatted_output: Optional[str]
     checkstatus: str
     consecutive_fails: Optional[int] = None # This isn't supposed to exist and yet it does
