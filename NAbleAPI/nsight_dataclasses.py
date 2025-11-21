@@ -12,11 +12,13 @@ Endpoints = Literal['list_clients', 'list_sites', 'list_device_monitoring_detail
 
 # Clients
 class Client(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str
     clientid: int
     view_dashboard: bool
     view_wkstsn_assets: bool
-    dashboard_username: Optional['str'] = None
+    dashboard_username: Optional[str] = None
+    timezone: Optional[str] = None
     creation_date: dt.date
     server_count: int
     workstation_count: int
@@ -27,6 +29,7 @@ Clients = TypeAdapter(list[Client])
 
 # Sites
 class Site(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     name: str
     siteid: int
     connection_ok: bool
@@ -38,7 +41,7 @@ Sites = TypeAdapter(list[Site])
 
 # Workstations
 class Workstation(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True) 
     
     name: str
     deviceid: int = Field(validation_alias=AliasChoices('workstationid')) # I like device ID better
@@ -102,6 +105,7 @@ Workstations = TypeAdapter(list[Workstation])
 
 # Device Details
 class ClientDeviceWorkstation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     deviceid: int = Field(validation_alias=AliasChoices('id'))
     name: str
     user: Optional[str] = Field(default=None, validation_alias=AliasChoices('username')) # Some devices don't return a user at all. #TODO should this be user or username? Make it the same for Workstation and this. 
@@ -155,6 +159,7 @@ class ClientDeviceWorkstation(BaseModel):
 
 
 class ClientDeviceSite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     siteid: int = Field(validation_alias=AliasChoices('id'))
     name: str
     devices: list[ClientDeviceWorkstation] = Field(validation_alias=AliasChoices('workstation', 'server'))
@@ -168,6 +173,7 @@ class ClientDeviceSite(BaseModel):
             return value
     
 class ClientDevice(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     clientid: int = Field(validation_alias=AliasChoices('id'))
     name: str
     sites: list[ClientDeviceSite] = Field(validation_alias=AliasChoices('site'))
@@ -185,6 +191,7 @@ ClientDevices = TypeAdapter(list[ClientDevice])
 
 # Device Details
 class DeviceDetailCheck(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     checkid: int
     item_type: str = Field(validation_alias=AliasChoices('dsc_247'))
     description: str
@@ -223,6 +230,7 @@ DeviceDetailChecks = TypeAdapter(list[DeviceDetailCheck])
 
     
 class DeviceDetail(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     deviceid: int = Field(validation_alias=AliasChoices('id'))
     name: str
     description: str
@@ -273,6 +281,7 @@ DeviceDetails = TypeAdapter(list[DeviceDetail])
 
 # Check
 class Check(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     checkid: int
     uid: int
     sync_status: str
@@ -352,16 +361,21 @@ Checks = TypeAdapter(list[Check])
 FailedCheckTypes = Literal["checks", "tasks", "random"]
 
 class FailedCheck(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     checkid: int
     check_type: int # Should this just say the type?
     description: str
     dsc_247: int # Whether the check is DSC or 247 
     date: dt.date
     time: dt.time
+    startdate: Optional[dt.date] # These are supposedly required yet half the time aren't returned
+    starttime: Optional[dt.time] # These are supposedly required yet half the time aren't returned
     formatted_output: Optional[str]
     checkstatus: str
+    consecutive_fails: Optional[int] = None # This isn't supposed to exist and yet it does
     
 class FailedCheckDevice(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     deviceid: int = Field(validation_alias=AliasChoices('id'))
     name: str
     failed_checks: Optional[list[FailedCheck]] = []
@@ -375,10 +389,11 @@ class FailedCheckDevice(BaseModel):
             return value["check"]
     
 class FailedCheckSite(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     siteid: int
     name: str
-    workstations: Optional[list[FailedCheckDevice]]
-    servers: Optional[list[FailedCheckDevice]] # TODO add server failed checks
+    workstations: Optional[list[FailedCheckDevice]] = []
+    servers: Optional[list[FailedCheckDevice]] = [] # TODO add server failed checks
     
     @field_validator('workstations', mode='before')
     def get_workstations(cls, value):
@@ -397,6 +412,7 @@ class FailedCheckSite(BaseModel):
                 return value["server"]
     
 class FailedCheckClient(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     clientid: int
     name: str
     sites: list[FailedCheckSite] = Field(validation_alias=AliasChoices('site'))
