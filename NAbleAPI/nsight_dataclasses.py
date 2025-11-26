@@ -281,7 +281,7 @@ DeviceDetails = TypeAdapter(list[DeviceDetail])
 
 # Check
 class Check(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(arbitrary_types_allowed=True) # Some checks seem to have extra shit
     checkid: int
     uid: int
     sync_status: str
@@ -324,7 +324,7 @@ class Check(BaseModel):
             return None
     
     @field_validator('sync_status', mode='before')
-    def convert_sync(cls, value):
+    def convert_sync(cls, value): #TODO This is a bitmask
         sync = { # 71 = awaiting sync I think
             0: 'synced'
         }
