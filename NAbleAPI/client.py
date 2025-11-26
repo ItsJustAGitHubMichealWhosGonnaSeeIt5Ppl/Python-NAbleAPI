@@ -10,7 +10,7 @@ import logging
 from datetime import date, datetime
 from typing import Optional
 from pydantic import TypeAdapter
-from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstations, Workstation, ClientDevices, DeviceDetails, Checks, FailedChecks, FailedCheckTypes, Outages
+from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstations, Workstation, ClientDevices, DeviceDetails, Checks, FailedChecks, FailedCheckTypes, Outages, DriveSpaceCheck
 
 # # Known issues
 # mobile devices may not work
@@ -665,10 +665,20 @@ class NAble:
             describe (bool, optional): Returns a discription of the service. Defaults to False.
         
         Returns:
-            dict: Single check configuration
+            dict | list: Single check configuration 
         """
         
         response = self._requester(mode='get',endpoint='list_check_config',rawParams=locals().copy())
+        if not self.useOgValues:
+            checkConfigs = []
+            for config in response: # Check configs are different
+                if "DriveSpaceCheck" in config:
+                    checkConfigs.append(DriveSpaceCheck.model_validate(config["DriveSpaceCheck"]))
+                else:
+                    checkConfigs.append(config) # Unknown
+            return checkConfigs
+                    
+                
         return response
     
     def formattedCheckOutput(self,
