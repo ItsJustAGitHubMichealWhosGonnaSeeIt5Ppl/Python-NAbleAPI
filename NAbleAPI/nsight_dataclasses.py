@@ -443,3 +443,29 @@ class Outage(BaseModel): # So many fields are not even listed in the documentati
     cause: Optional[str] = None
 
 Outages = TypeAdapter(list[Outage])
+
+# Check Config specifics
+
+
+SpaceUnits = Literal["Bytes", "Megabytes", "Gigabytes", "Percent"]
+class DriveSpaceCheck(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    
+    uid: int = Field(validation_alias=AliasChoices('@uid'))
+    driveletter: str
+    freespace: int
+    spaceunits: SpaceUnits | int
+    
+    @field_validator('spaceunits', mode='before')
+    def set_spaceunit(cls, value):
+        value = int(value)# TODO surely there is a way to use the Literal list
+        if value == 0:
+            return "Bytes"
+        elif value == 1:
+            return "Megabytes"
+        elif value == 2:
+            return "Gigabytes"
+        elif value == 3:
+            return "Percent"
+        else:
+            return value
