@@ -373,12 +373,19 @@ class FailedCheck(BaseModel):
     formatted_output: Optional[str]
     checkstatus: str
     consecutive_fails: Optional[int] = None # This isn't supposed to exist and yet it does
+class FailedCheckDeviceOverdue(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     
+    description: str
+    startdate: dt.date
+    starttime: dt.time
+     
 class FailedCheckDevice(BaseModel):
     model_config = ConfigDict(extra="forbid")
     deviceid: int = Field(validation_alias=AliasChoices('id'))
     name: str
     failed_checks: Optional[list[FailedCheck]] = []
+    overdue: Optional[FailedCheckDeviceOverdue] = None
     offline: Optional[dict] = None # TODO what the fuck is this? 
     
     @field_validator('failed_checks', mode='before')
