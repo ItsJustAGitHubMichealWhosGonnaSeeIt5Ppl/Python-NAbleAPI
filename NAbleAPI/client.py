@@ -10,7 +10,7 @@ import logging
 from datetime import date, datetime
 from typing import Optional
 from pydantic import TypeAdapter
-from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstations, Workstation, ClientDevices, DeviceDetails, Checks, FailedChecks, FailedCheckTypes, Outages, DriveSpaceCheck
+from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstations, Workstation, ClientDevices, DeviceDetails, Checks, FailedChecks, FailedCheckTypes, Outages, DriveSpaceCheck, FailedCheckClient
 
 # # Known issues
 # mobile devices may not work
@@ -561,14 +561,14 @@ class NAble:
         siteid:int,
         os:str,
         type:str,
-        beta:bool=False,
+        beta:bool = False,
         mode:Optional[str] = None,
-        proxyenabled:bool=None,
+        proxyenabled:Optional[bool] = None,
         proxyhost:Optional[str] = None,
-        proxyport:int=None,
+        proxyport:Optional[int] = None,
         proxyusername:Optional[str] = None,
         proxypassword:Optional[str] = None,
-        describe:bool=False
+        describe:bool = False
         ):
         """Creates a Site Installation Package based on the specified installer type. Where successful a package is created and downloaded.
         
@@ -649,10 +649,12 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='list_failing_checks',rawParams=locals().copy())
-        if not self.useOgValues:
-                return FailedChecks.validate_python(response)
+        if response != None:
+            if not self.useOgValues:
+                response = FailedChecks.validate_python(response)
         else:
-            return response
+            response = [] # Empty list for none
+        return response
 
     def checkConfig(self,
         checkid:int,
@@ -713,10 +715,13 @@ class NAble:
         """
         
         response = self._requester(mode='get',endpoint='list_outages',rawParams=locals().copy())
-        if not self.useOgValues:
-                return Outages.validate_python(response)
+        if "@host" in response and len(response) == 3: #TODO find a better way to filter this
+            response = ()
         else:
-            return response
+            if not self.useOgValues:
+                    response = Outages.validate_python(response)
+        
+        return response
     
     def performanceHistory(self, #TODO test performance history
         deviceid:int,
