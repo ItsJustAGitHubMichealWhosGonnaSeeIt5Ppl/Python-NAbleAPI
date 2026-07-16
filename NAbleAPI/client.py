@@ -1,21 +1,27 @@
-# NAble modules
-# Will eventually add some better documentation
+# META
+# I've seen other people do this, IDK how it works exactly though
+__version__ = '0.0.10'
 
-# Imports
+# BUILT-IN
+from typing import Optional, Literal
+import logging
+
+# EXTERNAL
 import requests
 import time
 import xmltodict
 from xml.parsers.expat import ExpatError
-import logging
 from datetime import date, datetime
-from typing import Optional
 from pydantic import TypeAdapter
+
+# INTERNAL
 from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstations, Workstation, ClientDevices, DeviceDetails, Checks, FailedChecks, FailedCheckTypes, Outages, DriveSpaceCheck, FailedCheckClient
 
-# # Known issues
-# mobile devices may not work
+# NOTES 
+## !Known issues! ##
+# !mobile devices may not work!
 
-
+## TODOS ##
 #TODO add logger
 #TODO add testing
 #TODO add reference ability for things like clientid, etc.
@@ -23,24 +29,32 @@ from NAbleAPI.nsight_dataclasses import Client, Clients, Site, Sites, Workstatio
 #TODO fix bumpver
 #TODO stop using locals() 
 
-version = '0.0.10' # Remember to update the docstring at the top too!
+# CODE
 
-class NAble:
-    """NAble NSight Data Extraction API Wrapper
+## STRING LITERALS ##
+# Site installation Package #
+sipOS = Literal["windows", "mac", "linux"]
+sipType = Literal["remote_worker", "group_policy"]
+sipMode = Literal["authenticate", "downloadgp", "downloadrwbuild"]
+
+## END STRING LITERALS ##
+
+class NSight:
+    """N-Able N-Sight Data Extraction API Wrapper
     Version: {version}
         
-    Official Documentation: https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm
+    Official Documentation: https://developer.n-able.com/n-sight/docs/getting-started-with-the-n-sight-api
     
     Notes:
         If describe is set to True, the actual response will not be given, just a description of the service.
 
     Args:
-        region (str): Your dashboard region (not all URLs have been verified)
-        key (str): Your NAble API key
+        region (str): Dashboard region (not all URLs have been verified)
+        key (str): API key
         
-    """.format(version=version)
+    """.format(version=__version__)
     def _requester(self, mode, endpoint, rawParams=None):
-        """Make requests to NAble API and do basic response handling. Also handles errors.
+        """Make requests to N-Able N-Sight API and do basic response handling. Also handles errors.
 
         Args:
             mode (str): Request mode [get,post,delete]
@@ -73,16 +87,17 @@ class NAble:
             
         # Error checking
         if response.status_code == 403: # invalid URL
-            raise requests.exceptions.InvalidURL('invalid URL')
+            response.raise_for_status()
         
         elif response.status_code != 200: # Some other bad code
-            raise Exception(f'Unknown response code {response.status_code}')
+            response.raise_for_status()
         
         #TODO figure out describe data and format it here
         
         else: # Valid URL
-            if endpoint == 'get_site_installation_package' and ('describe' in paramsDict and paramsDict['describe'] != True): # Some items are returned as bytes object
-                return response.content 
+            # Site package is returned as a bytes object
+            if endpoint == 'get_site_installation_package' and ('describe' not in paramsDict or ('describe'in paramsDict and paramsDict['describe'] != True)): 
+                return response.content
             elif 'describe' not in paramsDict or paramsDict['describe'] != True:
                 return self._responseFormatter(response,endpoint=endpoint)
             else:
@@ -450,8 +465,8 @@ class NAble:
             for siteNum, site in enumerate(clientDevices['site']):
                 if includeDetails == True:
                     newSiteObj = {'id':site['id'],
-                               'name':site['name'],
-                               'devices':[]}
+                        'name':site['name'],
+                        'devices':[]}
                     site = self._responseFormatter(site) # Reformat all devices
                     for device in site:
                         #Items which are not returneed in device details, but are in the overview (Why is there a difference?)
@@ -556,20 +571,21 @@ class NAble:
         response = self._requester(mode='get',endpoint='add_site', rawParams=locals().copy())
         return response
     
+    
     def siteInstallPackage(self,
         endcustomerid:int,
         siteid:int,
-        os:str,
-        type:str,
+        os:sipOS,
+        type:sipType,
         beta:bool = False,
-        mode:Optional[str] = None,
+        mode:Optional[sipMode] = None,
         proxyenabled:Optional[bool] = None,
         proxyhost:Optional[str] = None,
         proxyport:Optional[int] = None,
         proxyusername:Optional[str] = None,
         proxypassword:Optional[str] = None,
         describe:bool = False
-        ):
+        ) -> bytes:
         """Creates a Site Installation Package based on the specified installer type. Where successful a package is created and downloaded.
         
         
@@ -581,10 +597,10 @@ class NAble:
         Args:
             endcustomerid (int): Client ID.
             siteid (int): Site ID.
-            os (str): OS that package should be for [mac,windows,linux]
-            type (str): Type of installer to download [remote_worker,group_policy]. Note: group_policy only works with Windows
+            os (str): OS for package ('windows', 'mac', 'linux')
+            type (str): Type of installer to download ('remote_worker', 'group_policy'). Note: 'group_policy' only works with Windows
             beta (bool, optional): Download the beta (RC) agent. Defaults to False.
-            mode (str, optional): Mode [authenticate, downloadgp, downloadrwbuild]. Defaults to None.
+            mode (str, optional): Mode ('authenticate', 'downloadgp', 'downloadrwbuild'). Defaults to None.
             proxyenabled (bool, optional): (DEPRECATED) Use Proxy. Defaults to None.
             proxyhost (str, optional): (DEPRECATED) Proxy Host. Defaults to None.
             proxyport (int, optional): (DEPRECATED) Proxy Port. Defaults to None.
@@ -596,8 +612,23 @@ class NAble:
             bytes: raw bytes object.
         """
         
-        response = self._requester(mode='get',endpoint='get_site_installation_package',rawParams=locals().copy())
-        return response
+        params = {
+            "endcustomerid": endcustomerid,
+            "siteid": siteid,
+            "os": os,
+            "type": type,
+            "beta": beta,
+            "mode": mode,
+            "proxyenabled": proxyenabled,
+            "proxyhost": proxyhost,
+            "proxyport": proxyport,
+            "proxyusername": proxyusername,
+            "proxypassword": proxypassword,
+            "describe": describe
+            
+        }
+        resp = self._requester(mode='get',endpoint='get_site_installation_package',rawParams=params)
+        return resp
 
     # Checks and results
     def checks(self,
@@ -1664,3 +1695,9 @@ class NAble:
     
 #class Patches(NAble): # TODO move Patch management to its own class?
 #    pass
+
+# Retain backwarks compatibility
+class NAble(NSight):
+    def __init__(self, region:str, key:str, useOriginalValues:bool=False):
+        print("!DEPRECATION WARNING! This class has been renamed to NSight, use 'NSight()' going forward!")
+        super().__init__(region=region, key=key, useOriginalValues=useOriginalValues)
