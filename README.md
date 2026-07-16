@@ -1,17 +1,19 @@
-# NSight Data Extraction API wrapper/Library
+# N-Able N-Sight API library (unofficial)
 
-WARNING/NOTE: I wrote all of this based on the N-Able documentation, which says N-Able all over it, but I am now realising this is technically just for N-Sight, not N-Able.  I am in the process of renaming and fixing all of the issues this causes.
+> [!IMPORTANT]  
+> I wrote all of this based on the N-Able documentation, which says N-Able all over it, but I am now realizing this is technically just for N-Sight, not N-Able.  I am in the process of renaming and fixing issues this causes.
 
-This is a Python wrapper/library for the NSight Data Extraction API.  The NSight API returns data in xml format, this tool will convert those to lists and dictionaries for ease of use.
+Python wrapper/library for N-Able N-Sight API (aka: N-Sight Data Extraction API).
 
-The official API documentation from NSight can be found [here](https://documentation.n-able.com/remote-management/userguide/Content/api_calls.htm). I have tried to keep my naming scheme similar to theirs.
+[Official API documentation](https://developer.n-able.com/n-sight/docs). I have tried to keep the library naming scheme as close to their documentation as possible
 
-NOTE:  
-- This is still in extremely early stages of development, function names may change! 
+NOTE:
+
+- Still in development, method names may change!
 
 ## Table Of Contents
-*I don't know how to make this yet, so it's Coming Soon*
 
+*I don't know how to make this yet, so it's Coming Soon*
 
 ## Installation
 
@@ -21,95 +23,57 @@ pip install NAbleAPI
 
 ## Getting Started
 
-To use the NAble API, you will need to know your region and have an API key.
+To use the API, you will need to know your region and have an API key.
 
 1. Import the package
-2. Get an API key. Follow [these instructions](https://documentation.n-able.com/remote-management/userguide/Content/api_key.htm) to get your API key.
-3. Find your region (see below)
-
-
-### Regions
-
-To find your region, check [this page](https://documentation.n-able.com/remote-management/userguide/Content/determine_url.htm) or view table below. 
-
-Notes: 
-- Not all regions have been tested, if your region is marked 'untested' on the table below, please let me know whether it works.
-- If your dashboard URL starts with `www2`, assume it is just `www` for the region.
-- If there is another abbreviation or country code you would like added, let me know!
-
-| Dashboard URL | Region | Status |
-| --- | --- | --- |
-| www.am.remote.management | americas, ams | Untested |
-| wwwasia.system-monitor.com | asia | Untested |
-| www.system-monitor.com | australia, au, aus | Untested |
-| wwweurope1.systemmonitor.eu.com | europe, eu | Untested |
-| wwwfrance.systemmonitor.eu.com | france, fr | Untested |
-| wwwfrance1.systemmonitor.eu.com | france1, fr1 | Untested |
-| wwwgermany1.systemmonitor.eu.com | germany, de, deu | Untested |
-| wwwireland.systemmonitor.eu.com | ireland, ie, irl | Untested |
-| wwwpoland1.systemmonitor.eu.com | poland, pl,pol | Untested |
-| www.systemmonitor.co.uk | united kingdom, uk, gb, gbr | **Verified** |
-| www.systemmonitor.us | united states, us, usa | Untested |
+2. Get an API key: Follow [these instructions](https://developer.n-able.com/n-sight/docs/generate-an-api-key) to get your API key.
+3. Find your region: To Check [this page](https://developer.n-able.com/n-sight/docs/determine-server-for-api-query) or check the [Regions Table](#regions-table).
 
 ### Using the package
 
-
 #### Create a new .py file in the root directory and import the NAble package
+
 ```
-from NAbleAPI import NAble
+from NAbleAPI import NSight
 ```
 
 #### Authenticate with your API key
+
 ```
-na = NAble('[YOUR REGION]','[YOUR API KEY]')
+nsight = NSight('[YOUR REGION]','[YOUR API KEY]')
 ```
 
 Example
 
 ```
-na = NAble('uk','f821213a8d3q43843dj39824')
+nsight = NSight('uk','f821213a8d3q43843dj39824')
 ```
 
 (Not a real API key, don't try to use it)
 
 
 #### Make your first request
+
 Gee it sure would be helpful is there was documentation for the available commands.  Unfortunately, there isn't right now.
 
 Get all your clients
 
 ```
-myNAbleClients = na.clients()
-```
-
-
-#### Storing your key
-It's probably best not to store your API key in your script. Instead, you can create a .env file and use that.
-
-1. Create a new file called `.env` in the root directory
-2. Put your API key in it (do not put it in quotes, type exactly as shown below)
-```
-NABLE_KEY = f821213a8d3q43843dj39824
-```
-3. Get the key from file
-``` 
-from NAbleAPI import NAble # Import the NAble package
-import os # Import OS package (built into Python, I'm like 99% sure)
-
-NABLE_KEY = os.getenv("NABLE_KEY")
-
-na = NAble('uk',NABLE_KEY)
+myClients = NSight.clients()
 ```
 
 ## API Endpoints
-The endpoints are grouped by category on NAble's website, so I have done the same below.
-I found the names on NAbles site to be a bit long, so I have shortened them a bit. The `Function Name` is what you will use in Python.
+
+> [!WARNING]  
+> N-Able has moved all their documentation to a different site, so some links may not work!
+
+The endpoints are grouped by category on N-Able's website, so I have done the same below.
+I found the names on N-Able's site to be a bit long, so I have shortened them a bit. The `Function Name` is what you will use in Python.
 I'm doing my best to get them all added!
 
+### Clients, SItes, and Devices
 
-
-### Clients, SItes, and Devices 
-Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/devices.htm)
+Official [documentation](https://documentation.n-able.com/remote-management/userguide/Content/devices.htm)
 | Service | Status | Function Name | Description |
 | --- | --- | --- | --- |
 | list_clients | Working | clients() | List all clients |
@@ -124,7 +88,8 @@ Official NAble documentation page [here](https://documentation.n-able.com/remote
 | get_site_installation_package() | Partially Working | siteInstallPackage | Create/Get a site installation package (returns rawbytes right now) |
 
 ### Checks and results
-Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/checks_and_results.htm)
+
+Official [documentation](https://documentation.n-able.com/remote-management/userguide/Content/checks_and_results.htm)
 | Service | Status | Function Name | Description |
 | --- | --- | --- | --- |
 | list_checks | Working | checks() |  List all checks for a device |
@@ -140,7 +105,8 @@ Official NAble documentation page [here](https://documentation.n-able.com/remote
 | list_templates | Working | templates() | List all server/workstation monitoring templates |
 
 ### Anti-Virus Update Check Information
-Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/api_av_info.htm)
+
+Official [documentation](https://documentation.n-able.com/remote-management/userguide/Content/api_av_info.htm)
 | Service | Status | Function Name | Description |
 | --- | --- | --- | --- |
 | list_supported_av_products | Working | supportedAVs() | Lists supported AVs |
@@ -149,13 +115,15 @@ Official NAble documentation page [here](https://documentation.n-able.com/remote
 | list_av_history | Working | AVHistory() | List last 60s of AV status (I got 90 though...) |
 
 ### List Backup Check History
-Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/list_backup_history.htmm)
+
+Official [documentation](https://documentation.n-able.com/remote-management/userguide/Content/list_backup_history.htmm)
 | Service | Status | Function Name | Description |
 | --- | --- | --- | --- |
 | list_backup_history | Untested | backupHistory() | Get last 60 days of backup history for device |
 
 ### Asset Tracking Information
-Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/asset_tracking_information.htm)
+
+Official [documentation](https://documentation.n-able.com/remote-management/userguide/Content/asset_tracking_information.htm)
 | Service | Status | Function Name | Description |
 | --- | --- | --- | --- |
 | list_all_hardware | Working | assetHardware() | Get all hardware for an asset |
@@ -166,17 +134,17 @@ Official NAble documentation page [here](https://documentation.n-able.com/remote
 | list_client_license_count | Untested | assetLicensedSoftware() | Get client software license counts |
 | list_device_asset_details | Working | assetDetails() | Get asset information from device ID |
 
-
-
 ### Settings
-Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/settings.htm)
+
+Official [documentation](https://documentation.n-able.com/remote-management/userguide/Content/settings.htm)
 | Service | Status | Function Name | Description |
 | --- | --- | --- | --- |
 | list_wallchart_settings | Working | wallchartSettings() | Get general wallchart settings |
 | list_general_settings | Working | generalSettings() | Get general account settings |
 
 ### Patch Management
-Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/patch_management.htm)
+
+Official [documentation](https://documentation.n-able.com/remote-management/userguide/Content/patch_management.htm)
 
 These may be moved to their own subclass in the future!
 
@@ -190,7 +158,8 @@ These may be moved to their own subclass in the future!
 | patch_retry | Working | retryPatches() | Retry patch(es) for a device (think this is the same as reprocess) |
 
 ### Managed Anti-Virus
-Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/managed_antivirus2.htm)
+
+Official [documentation](https://documentation.n-able.com/remote-management/userguide/Content/managed_antivirus2.htm)
 | Service | Status | Function Name | Description |
 | --- | --- | --- | --- |
 | mav_quarantine_list | Untested | mavQuarantine() | Get quarantined threats for a device |
@@ -207,17 +176,41 @@ Official NAble documentation page [here](https://documentation.n-able.com/remote
 | mav_definitions_update | Working | mavUpdate() | Update the bitdefender definitions on a device |
 
 ### Backup & Recovery
-Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/api_mob_over.htm)
+
+Official [documentation](https://documentation.n-able.com/remote-management/userguide/Content/api_mob_over.htm)
 | Service | Status | Function Name | Description |
 | --- | --- | --- | --- |
 
 ### Run Task Now
-Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/run_task_now.htm)
+
+Official [documentation](https://documentation.n-able.com/remote-management/userguide/Content/run_task_now.htm)
 | Service | Status | Function Name | Description |
 | --- | --- | --- | --- |
 
 ### List Active Directory Users
-Official NAble documentation page [here](https://documentation.n-able.com/remote-management/userguide/Content/list_active_directory_users.htm)
+
+Official [documentation](https://documentation.n-able.com/remote-management/userguide/Content/list_active_directory_users.htm)
 | Service | Status | Function Name | Description |
 | --- | --- | --- | --- |
 
+### Regions Table
+
+> [!TIP]
+> Not all regions have been tested, if your region is marked 'untested' on the table below, please let me know if it works!
+
+
+If your dashboard URL starts with `www2`, assume it is just `www` for the region. If there is another abbreviation or country code you would like added, let me know!
+
+| Dashboard URL | Region | Status |
+| --- | --- | --- |
+| www.am.remote.management | americas, ams | Untested |
+| wwwasia.system-monitor.com | asia | Untested |
+| www.system-monitor.com | australia, au, aus | Untested |
+| wwweurope1.systemmonitor.eu.com | europe, eu | Untested |
+| wwwfrance.systemmonitor.eu.com | france, fr | Untested |
+| wwwfrance1.systemmonitor.eu.com | france1, fr1 | Untested |
+| wwwgermany1.systemmonitor.eu.com | germany, de, deu | Untested |
+| wwwireland.systemmonitor.eu.com | ireland, ie, irl | Untested |
+| wwwpoland1.systemmonitor.eu.com | poland, pl,pol | Untested |
+| www.systemmonitor.co.uk | united kingdom, uk, gb, gbr | **Verified** |
+| www.systemmonitor.us | united states, us, usa | Untested |
